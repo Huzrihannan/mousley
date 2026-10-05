@@ -369,7 +369,8 @@ namespace Mousely.Tray.Server
                     case "launch_app":
                         int slot = root.TryGetProperty("slot", out var slotProp) ? slotProp.GetInt32() : 1;
                         string? cmd = root.TryGetProperty("command", out var cmdProp) ? cmdProp.GetString() : null;
-                        ShortcutManager.LaunchSlot(slot, cmd);
+                        bool launched = ShortcutManager.LaunchSlot(slot, cmd);
+                        await SendJsonAsync(ws, new { type = "action_ack", action = "launch_app", slot = slot, success = launched }, token);
                         break;
 
                     case "clipboard_action":
@@ -377,6 +378,7 @@ namespace Mousely.Tray.Server
                         if (clipType == "copy") ShortcutManager.SendCopy();
                         else if (clipType == "paste") ShortcutManager.SendPaste();
                         else if (clipType == "history") ShortcutManager.SendClipboardHistory();
+                        await SendJsonAsync(ws, new { type = "action_ack", action = "clipboard_action", clipType = clipType, success = true }, token);
                         break;
                 }
             }

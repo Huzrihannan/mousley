@@ -363,12 +363,40 @@
     pingTimer = setTimeout(sendPing, 3000);
   }
 
+  // --- Apple Island Toast ---
+  let toastTimer = null;
+  function showToast(text, icon = '✨') {
+    const toast = document.getElementById('appleToast');
+    const toastText = document.getElementById('toastText');
+    const toastIcon = document.getElementById('toastIcon');
+    if (!toast) return;
+
+    if (toastText) toastText.textContent = text;
+    if (toastIcon) toastIcon.textContent = icon;
+
+    toast.classList.add('visible');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      toast.classList.remove('visible');
+    }, 2000);
+  }
+  window.showToast = showToast;
+
   // --- Message Dispatcher ---
   function handleServerMessage(msg) {
     switch (msg.type) {
       case 'pong':
         latencyMs = Math.round(performance.now() - pingStartTime);
         latencyTag.textContent = `${latencyMs} ms`;
+        break;
+
+      case 'action_ack':
+        if (msg.action === 'launch_app') {
+          showToast('App Launched', '🚀');
+        } else if (msg.action === 'clipboard_action') {
+          const names = { copy: 'Copied (Ctrl+C)', paste: 'Pasted (Ctrl+V)', history: 'Clipboard History (Win+V)' };
+          showToast(names[msg.clipType] || 'Action Completed', '📋');
+        }
         break;
 
       case 'init':
@@ -582,12 +610,20 @@
   // --- Page 2: Mission Control (8 Blocks - Instant 0ms) ---
   window.launchApp = function(slot, name) {
     triggerHaptic('medium');
+    showToast(`Launching ${name}...`, '🚀');
     sendCommand('launch_app', { slot: slot, name: name });
   };
 
   // --- Page 3: Clipboard Actions (3 Blocks - Instant 0ms) ---
   window.triggerClipboardAction = function(type) {
     triggerHaptic('medium');
+    const labels = {
+      copy: ['Copied (Ctrl + C)', '📋'],
+      paste: ['Pasting (Ctrl + V)', '📥'],
+      history: ['Clipboard History (Win + V)', '📜']
+    };
+    const info = labels[type] || ['Action Sent', '✨'];
+    showToast(info[0], info[1]);
     sendCommand('clipboard_action', { type: type });
   };
 
