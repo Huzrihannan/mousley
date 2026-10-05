@@ -1,4 +1,4 @@
-// Mousely - Ultra-Responsive Landscape Media, Mission Control & Clipboard Controller
+// Mousely - High Performance Landscape Remote (Zero-Lag Optimized)
 (function() {
   'use strict';
 
@@ -20,9 +20,10 @@
   let reconnectAttempts = 0;
   let discoveredServers = new Map();
   let volumeThrottleTimer = null;
+  let rafId = null;
 
-  // Carousel & Gesture State
-  let currentPage = 0; // 0: Media, 1: Mission Control, 2: Clipboard
+  // Carousel & 2-Finger Swipe State
+  let currentPage = 0;
   let isTwoFingerGesture = false;
   let twoFingerStartX = 0;
   let twoFingerLastX = 0;
@@ -60,22 +61,23 @@
   const volIcon = document.getElementById('volIcon');
   const muteIcon = document.getElementById('muteIcon');
   
-  const deviceModal = document.getElementById('deviceModal');
-  const discoveredList = document.getElementById('discoveredList');
+  const desktopLaunchOverlay = document.getElementById('desktopLaunchOverlay');
+  const desktopDevicesList = document.getElementById('desktopDevicesList');
+  const discoverySubtitle = document.getElementById('discoverySubtitle');
   const manualIpInput = document.getElementById('manualIpInput');
 
-  // Haptic feedback trigger
+  // Instant Haptic Trigger
   function triggerHaptic(style = 'light') {
     try {
       if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.nativeApp) {
         window.webkit.messageHandlers.nativeApp.postMessage({ action: 'haptic', style: style });
       } else if (navigator.vibrate) {
-        navigator.vibrate(style === 'medium' ? 20 : 10);
+        navigator.vibrate(style === 'medium' ? 18 : 8);
       }
     } catch (e) {}
   }
 
-  // Format seconds to mm:ss
+  // Format mm:ss
   function formatTime(seconds) {
     if (isNaN(seconds) || seconds < 0) return '0:00';
     const mins = Math.floor(seconds / 60);
@@ -83,39 +85,30 @@
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   }
 
-  // --- Carousel & Page Navigation ---
+  // --- Carousel & Navigation ---
   window.switchPage = function(pageIndex) {
     if (pageIndex < 0 || pageIndex > 2) return;
     currentPage = pageIndex;
 
-    // Slide carousel
     const offsetPercent = pageIndex * 33.333333;
-    carouselTrack.style.transform = `translateX(-${offsetPercent}%)`;
+    carouselTrack.style.transform = `translate3d(-${offsetPercent}%, 0, 0)`;
 
-    // Update Navigation Tabs
+    // Update Segmented Tabs
     const tabs = navTabs.querySelectorAll('.nav-tab');
     tabs.forEach((tab, idx) => {
-      if (idx === pageIndex) {
-        tab.classList.add('active');
-      } else {
-        tab.classList.remove('active');
-      }
+      tab.classList.toggle('active', idx === pageIndex);
     });
 
     // Update Dots
     const dots = carouselDots.querySelectorAll('.dot');
     dots.forEach((dot, idx) => {
-      if (idx === pageIndex) {
-        dot.classList.add('active');
-      } else {
-        dot.classList.remove('active');
-      }
+      dot.classList.toggle('active', idx === pageIndex);
     });
 
     triggerHaptic('light');
   };
 
-  // --- Two-Finger Swipe Gesture Detection ---
+  // --- Two-Finger Swipe Gesture ---
   document.addEventListener('touchstart', (e) => {
     if (e.touches.length === 2) {
       isTwoFingerGesture = true;
@@ -135,48 +128,88 @@
   document.addEventListener('touchend', (e) => {
     if (isTwoFingerGesture) {
       const deltaX = twoFingerLastX - twoFingerStartX;
-      if (deltaX < -50) {
-        // Swiped left -> next page
-        if (currentPage < 2) {
-          window.switchPage(currentPage + 1);
-        }
-      } else if (deltaX > 50) {
-        // Swiped right -> prev page
-        if (currentPage > 0) {
-          window.switchPage(currentPage - 1);
-        }
+      if (deltaX < -45) {
+        if (currentPage < 2) window.switchPage(currentPage + 1);
+      } else if (deltaX > 45) {
+        if (currentPage > 0) window.switchPage(currentPage - 1);
       }
       isTwoFingerGesture = false;
     }
   }, { passive: true });
 
-  // --- Page 2: Mission Control (8 Blocks) ---
-  window.launchApp = function(slot, name) {
-    triggerHaptic('medium');
-    console.log(`Launching app slot ${slot}: ${name}`);
-    sendCommand('launch_app', { slot: slot, name: name });
+  // --- Desktop Selection & Discovery ---
+  window.showDesktopSelector = function() {
+    triggerHaptic('light');
+    desktopLaunchOverlay.classList.remove('hidden');
+    renderDiscoveredList();
   };
 
-  // --- Page 3: Clipboard Actions (3 Blocks) ---
-  window.triggerClipboardAction = function(type) {
+  window.hideDesktopSelector = function() {
+    desktopLaunchOverlay.classList.add('hidden');
+  };
+
+  window.onServerDiscovered = function(serverInfo) {
+    if (!serverInfo || !serverInfo.ip) return;
+    const hostKey = `${serverInfo.ip}:${serverInfo.port || 8089}`;
+    discoveredServers.set(hostKey, serverInfo);
+    renderDiscoveredList();
+
+    // Auto-connect on launch if not connected yet
+    const savedHost = localStorage.getItem('mousely_last_host');
+    if (!isConnected) {
+      if (savedHost && savedHost === hostKey) {
+        connectToHost(hostKey);
+      } else if (discoveredServers.size === 1 && !savedHost) {
+        connectToHost(hostKey);
+      }
+    }
+  };
+
+  function renderDiscoveredList() {
+    if (discoveredServers.size === 0) {
+      desktopDevicesList.innerHTML = `
+        <div class="desktop-item-card" style="justify-content: center; color: var(--text-secondary); cursor: default;">
+          <span>Searching local Wi-Fi for Windows PCs...</span>
+        </div>`;
+      discoverySubtitle.textContent = 'Looking for Mousely on your Wi-Fi...';
+      return;
+    }
+
+    discoverySubtitle.textContent = `Found ${discoveredServers.size} desktop PC${discoveredServers.size > 1 ? 's' : ''}`;
+    desktopDevicesList.innerHTML = '';
+
+    discoveredServers.forEach((info, host) => {
+      const card = document.createElement('div');
+      card.className = 'desktop-item-card';
+      card.onclick = () => connectToHost(host);
+      card.innerHTML = `
+        <div class="desktop-item-left">
+          <div class="desktop-icon-badge">🖥️</div>
+          <div class="desktop-item-meta">
+            <span class="desktop-pc-name">${info.name || 'Windows Desktop'}</span>
+            <span class="desktop-pc-ip">${host} • Ready</span>
+          </div>
+        </div>
+        <button class="btn-connect-pill">Connect ➔</button>
+      `;
+      desktopDevicesList.appendChild(card);
+    });
+  }
+
+  window.connectToHost = function(host) {
     triggerHaptic('medium');
-    console.log(`Triggering clipboard action: ${type}`);
-    sendCommand('clipboard_action', { type: type });
+    connectWebSocket(host);
+  };
+
+  window.connectManual = function() {
+    let input = manualIpInput.value.trim();
+    if (!input) return;
+    if (!input.includes(':')) input += ':8089';
+    connectToHost(input);
   };
 
   // --- WebSocket Connection ---
   function connectWebSocket(host) {
-    if (!host) {
-      const savedHost = localStorage.getItem('mousely_last_host');
-      if (savedHost) {
-        host = savedHost;
-      } else if (window.location.host && !window.location.protocol.startsWith('file')) {
-        host = window.location.host;
-      } else {
-        host = '127.0.0.1:8089';
-      }
-    }
-
     serverHost = host;
     localStorage.setItem('mousely_last_host', host);
 
@@ -188,22 +221,22 @@
     statusDot.className = 'status-dot';
 
     const wsUrl = `ws://${host}/ws`;
-    console.log(`Connecting to Mousely server at: ${wsUrl}`);
+    console.log(`Connecting to Mousely: ${wsUrl}`);
 
     try {
       ws = new WebSocket(wsUrl);
     } catch (err) {
-      console.error('WebSocket creation error:', err);
       scheduleReconnect();
       return;
     }
 
     ws.onopen = function() {
-      console.log('Connected to Mousely Server!');
+      console.log('Connected to Windows Desktop!');
       isConnected = true;
       reconnectAttempts = 0;
       statusDot.className = 'status-dot online';
       triggerHaptic('medium');
+      window.hideDesktopSelector();
       sendPing();
     };
 
@@ -211,17 +244,12 @@
       try {
         const data = JSON.parse(event.data);
         handleServerMessage(data);
-      } catch (err) {
-        console.error('Error parsing incoming message:', err);
-      }
+      } catch (err) {}
     };
 
-    ws.onerror = function(err) {
-      console.warn('WebSocket error:', err);
-    };
+    ws.onerror = function() {};
 
     ws.onclose = function() {
-      console.log('WebSocket closed.');
       isConnected = false;
       statusDot.className = 'status-dot offline';
       statusDeviceName.textContent = 'Disconnected';
@@ -232,7 +260,7 @@
 
   function scheduleReconnect() {
     reconnectAttempts++;
-    const delay = Math.min(1000 * Math.pow(1.5, reconnectAttempts), 5000);
+    const delay = Math.min(1000 * Math.pow(1.5, reconnectAttempts), 4000);
     setTimeout(() => {
       if (!isConnected && serverHost) {
         connectWebSocket(serverHost);
@@ -242,18 +270,17 @@
 
   function sendCommand(action, payload = {}) {
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    const msg = Object.assign({ action: action }, payload);
-    ws.send(JSON.stringify(msg));
+    ws.send(JSON.stringify(Object.assign({ action: action }, payload)));
   }
 
   function sendPing() {
     if (!isConnected || !ws || ws.readyState !== WebSocket.OPEN) return;
     pingStartTime = performance.now();
     sendCommand('ping');
-    setTimeout(sendPing, 2500);
+    setTimeout(sendPing, 2000);
   }
 
-  // --- Handle Server Messages ---
+  // --- Message Dispatcher ---
   function handleServerMessage(msg) {
     switch (msg.type) {
       case 'pong':
@@ -286,7 +313,7 @@
     }
   }
 
-  // --- Volume UI & Sync ---
+  // --- Volume UI & Sync (Instant Touch) ---
   function updateVolumeUI(volPercent, muted) {
     currentVolume = Math.max(0, Math.min(100, Math.round(volPercent)));
     isMuted = !!muted;
@@ -294,26 +321,27 @@
     volumeFill.style.width = `${currentVolume}%`;
     volumeBadge.textContent = isMuted ? 'Muted' : `${currentVolume}%`;
 
-    if (isMuted || currentVolume === 0) {
-      volIcon.style.display = 'none';
-      muteIcon.style.display = 'block';
-    } else {
-      volIcon.style.display = 'block';
-      muteIcon.style.display = 'none';
-    }
+    volIcon.style.display = isMuted || currentVolume === 0 ? 'none' : 'block';
+    muteIcon.style.display = isMuted || currentVolume === 0 ? 'block' : 'none';
   }
 
   function sendVolumeUpdate(val) {
     val = Math.max(0, Math.min(100, Math.round(val)));
     currentVolume = val;
-    volumeFill.style.width = `${currentVolume}%`;
-    volumeBadge.textContent = `${currentVolume}%`;
+
+    if (!rafId) {
+      rafId = requestAnimationFrame(() => {
+        volumeFill.style.width = `${currentVolume}%`;
+        volumeBadge.textContent = `${currentVolume}%`;
+        rafId = null;
+      });
+    }
 
     if (!volumeThrottleTimer) {
       volumeThrottleTimer = setTimeout(() => {
         sendCommand('set_volume', { value: currentVolume });
         volumeThrottleTimer = null;
-      }, 25);
+      }, 30);
     }
   }
 
@@ -329,8 +357,7 @@
     const rect = volumeTrack.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const ratio = (clientX - rect.left) / rect.width;
-    const percent = Math.max(0, Math.min(100, Math.round(ratio * 100)));
-    sendVolumeUpdate(percent);
+    sendVolumeUpdate(Math.round(ratio * 100));
   }
 
   volumeTrack.addEventListener('pointerdown', (e) => {
@@ -340,12 +367,10 @@
   });
 
   volumeTrack.addEventListener('pointermove', (e) => {
-    if (isDraggingVolume) {
-      handleVolumeTouch(e);
-    }
+    if (isDraggingVolume) handleVolumeTouch(e);
   });
 
-  const finishVolumeDrag = (e) => {
+  const finishVolumeDrag = () => {
     if (isDraggingVolume) {
       isDraggingVolume = false;
       commitVolume(currentVolume);
@@ -366,35 +391,24 @@
     updateVolumeUI(currentVolume, isMuted);
   };
 
-  btnMuteToggle.addEventListener('click', () => {
-    window.toggleMute();
-  });
+  btnMuteToggle.addEventListener('click', window.toggleMute);
 
   window.onNativeVolumeChanged = function(newVolumePercent) {
-    if (!isDraggingVolume) {
-      commitVolume(newVolumePercent);
-    }
+    if (!isDraggingVolume) commitVolume(newVolumePercent);
   };
 
-  // --- Media UI & Controls ---
+  // --- Media UI & Controls (Instant 0ms Feedback) ---
   function updateMediaUI(media) {
     if (!media) return;
 
     trackTitle.textContent = media.title || 'No Media Playing';
     trackArtist.textContent = media.artist ? (media.artist + (media.album ? ` • ${media.album}` : '')) : 'Windows Media Session';
 
-    if (media.source) {
-      sourceAppPill.textContent = media.source;
-    }
+    if (media.source) sourceAppPill.textContent = media.source;
 
     isPlaying = !!media.isPlaying;
-    if (isPlaying) {
-      playIcon.style.display = 'none';
-      pauseIcon.style.display = 'block';
-    } else {
-      playIcon.style.display = 'block';
-      pauseIcon.style.display = 'none';
-    }
+    playIcon.style.display = isPlaying ? 'none' : 'block';
+    pauseIcon.style.display = isPlaying ? 'block' : 'none';
 
     if (media.artwork) {
       albumArtImg.src = media.artwork;
@@ -402,9 +416,7 @@
       albumArtImg.src = `http://${serverHost}/api/artwork?t=${Date.now()}`;
     }
 
-    if (media.duration !== undefined) {
-      duration = media.duration;
-    }
+    if (media.duration !== undefined) duration = media.duration;
     if (media.position !== undefined) {
       currentPosition = media.position;
       lastPositionUpdate = performance.now();
@@ -415,10 +427,8 @@
 
   function updateTimelineDisplay() {
     if (isScrubbingTimeline) return;
-
     timeElapsed.textContent = formatTime(currentPosition);
     timeTotal.textContent = formatTime(duration);
-
     const percent = duration > 0 ? (currentPosition / duration) * 100 : 0;
     timelineProgress.style.width = `${Math.min(100, Math.max(0, percent))}%`;
   }
@@ -439,9 +449,8 @@
     const rect = timelineBar.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    const targetSeconds = Math.round(ratio * duration);
-    currentPosition = targetSeconds;
-    timeElapsed.textContent = formatTime(targetSeconds);
+    currentPosition = Math.round(ratio * duration);
+    timeElapsed.textContent = formatTime(currentPosition);
     timelineProgress.style.width = `${ratio * 100}%`;
   }
 
@@ -453,12 +462,10 @@
   });
 
   timelineBar.addEventListener('pointermove', (e) => {
-    if (isScrubbingTimeline) {
-      handleTimelineScrub(e);
-    }
+    if (isScrubbingTimeline) handleTimelineScrub(e);
   });
 
-  const finishTimelineScrub = (e) => {
+  const finishTimelineScrub = () => {
     if (isScrubbingTimeline) {
       isScrubbingTimeline = false;
       sendCommand('seek', { position: currentPosition });
@@ -470,114 +477,72 @@
   timelineBar.addEventListener('pointerup', finishTimelineScrub);
   timelineBar.addEventListener('pointercancel', finishTimelineScrub);
 
-  btnPlayPause.addEventListener('click', () => {
+  // Instant Play / Pause / Skip
+  btnPlayPause.addEventListener('pointerdown', () => {
     triggerHaptic('medium');
     isPlaying = !isPlaying;
-    if (isPlaying) {
-      playIcon.style.display = 'none';
-      pauseIcon.style.display = 'block';
-    } else {
-      playIcon.style.display = 'block';
-      pauseIcon.style.display = 'none';
-    }
+    playIcon.style.display = isPlaying ? 'none' : 'block';
+    pauseIcon.style.display = isPlaying ? 'block' : 'none';
     sendCommand('play_pause');
   });
 
-  btnPrev.addEventListener('click', () => {
+  btnPrev.addEventListener('pointerdown', () => {
     triggerHaptic('light');
     sendCommand('prev');
   });
 
-  btnNext.addEventListener('click', () => {
+  btnNext.addEventListener('pointerdown', () => {
     triggerHaptic('light');
     sendCommand('next');
   });
 
-  // --- Device Discovery & Modal ---
-  window.openDeviceModal = function() {
-    triggerHaptic('light');
-    deviceModal.classList.add('active');
-    renderDiscoveredList();
+  // --- Page 2: Mission Control (8 Blocks - Instant 0ms) ---
+  window.launchApp = function(slot, name) {
+    triggerHaptic('medium');
+    sendCommand('launch_app', { slot: slot, name: name });
   };
 
-  window.closeDeviceModal = function() {
-    deviceModal.classList.remove('active');
+  // --- Page 3: Clipboard Actions (3 Blocks - Instant 0ms) ---
+  window.triggerClipboardAction = function(type) {
+    triggerHaptic('medium');
+    sendCommand('clipboard_action', { type: type });
   };
 
-  window.onServerDiscovered = function(serverInfo) {
-    if (!serverInfo || !serverInfo.ip) return;
-    const key = `${serverInfo.ip}:${serverInfo.port || 8089}`;
-    discoveredServers.set(key, serverInfo);
-    renderDiscoveredList();
-
-    if (!isConnected) {
-      connectWebSocket(key);
-    }
-  };
-
-  function renderDiscoveredList() {
-    if (discoveredServers.size === 0) {
-      discoveredList.innerHTML = `
-        <div class="device-item" style="color: var(--text-secondary); justify-content: center;">
-          Searching local Wi-Fi for Windows PCs...
-        </div>`;
-      return;
+  // --- Background Prober on Launch ---
+  function probeSubnet() {
+    const savedHost = localStorage.getItem('mousely_last_host');
+    if (savedHost) {
+      fetch(`http://${savedHost}/api/status`, { signal: AbortSignal.timeout(1200) })
+        .then(r => r.json())
+        .then(data => {
+          const parts = savedHost.split(':');
+          window.onServerDiscovered({
+            name: data.deviceName || 'Windows PC',
+            ip: parts[0],
+            port: parseInt(parts[1] || '8089')
+          });
+        })
+        .catch(() => {});
     }
 
-    discoveredList.innerHTML = '';
-    discoveredServers.forEach((info, host) => {
-      const item = document.createElement('div');
-      item.className = 'device-item';
-      item.onclick = () => {
-        connectWebSocket(host);
-        window.closeDeviceModal();
-      };
-      item.innerHTML = `
-        <div class="device-item-info">
-          <span class="device-item-name">${info.name || 'Windows PC'}</span>
-          <span class="device-item-ip">${host}</span>
-        </div>
-        <span class="connect-badge">Connect</span>
-      `;
-      discoveredList.appendChild(item);
-    });
+    if (window.location.host && !window.location.protocol.startsWith('file')) {
+      window.onServerDiscovered({
+        name: 'Windows PC (Host)',
+        ip: window.location.hostname,
+        port: parseInt(window.location.port || '8089')
+      });
+    }
   }
 
-  window.connectManual = function() {
-    const input = manualIpInput.value.trim();
-    if (!input) return;
-    let target = input;
-    if (!target.includes(':')) {
-      target += ':8089';
-    }
-    connectWebSocket(target);
-    window.closeDeviceModal();
-  };
-
-  // --- Liquid Glass UI Setup ---
-  function initLiquidGlass() {
-    try {
-      if (typeof Container !== 'undefined' && typeof Button !== 'undefined') {
-        window.glassControls = {
-          edgeIntensity: 0.025,
-          rimIntensity: 0.08,
-          blurRadius: 8.0,
-          tintOpacity: 0.15
-        };
-      }
-    } catch (e) {}
-  }
-
-  // Bootstrapping
+  // --- Bootstrapping on Launch ---
   window.addEventListener('DOMContentLoaded', () => {
-    initLiquidGlass();
+    probeSubnet();
 
-    const defaultHost = localStorage.getItem('mousely_last_host') || 
-                        (window.location.host && !window.location.protocol.startsWith('file') ? window.location.host : '');
-    if (defaultHost) {
-      connectWebSocket(defaultHost);
+    const savedHost = localStorage.getItem('mousely_last_host');
+    if (savedHost) {
+      connectWebSocket(savedHost);
     } else {
-      window.openDeviceModal();
+      window.showDesktopSelector();
     }
   });
 

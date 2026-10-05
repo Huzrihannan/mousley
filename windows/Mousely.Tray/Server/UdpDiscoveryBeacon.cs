@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -34,12 +35,12 @@ namespace Mousely.Tray.Server
                 _udpClient.EnableBroadcast = true;
                 _udpClient.Client.Bind(new IPEndPoint(IPAddress.Any, DiscoveryPort));
 
-                Console.WriteLine($"[Discovery] UDP beacon listening & broadcasting on port {DiscoveryPort}");
+                Console.WriteLine($"[Discovery] UDP beacon active on port {DiscoveryPort}");
 
-                // Start broadcaster loop
+                // Broadcaster loop (every 1.5 seconds for instant detection)
                 Task.Run(() => BroadcastLoopAsync(_cts.Token));
 
-                // Start receiver/responder loop
+                // Receiver/responder loop (instant replies to MOUSELY_DISCOVER queries)
                 Task.Run(() => ReceiveLoopAsync(_cts.Token));
             }
             catch (Exception ex)
@@ -50,8 +51,6 @@ namespace Mousely.Tray.Server
 
         private async Task BroadcastLoopAsync(CancellationToken token)
         {
-            var broadcastEndpoint = new IPEndPoint(IPAddress.Broadcast, DiscoveryPort);
-
             while (!token.IsCancellationRequested && _udpClient != null)
             {
                 try
@@ -67,19 +66,29 @@ namespace Mousely.Tray.Server
                     };
 
                     byte[] bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(payload));
-                    await _udpClient.SendAsync(bytes, bytes.Length, broadcastEndpoint);
+                    var targets = GetBroadcastAddresses();
+
+                    foreach (var target in targets)
+                    {
+                        try
+                        {
+                            var endpoint = new IPEndPoint(target, DiscoveryPort);
+                            await _udpClient.SendAsync(bytes, bytes.Length, endpoint);
+                        }
+                        catch { }
+                    }
                 }
                 catch (Exception ex)
                 {
                     if (!token.IsCancellationRequested)
                     {
-                        Console.WriteLine($"[Discovery] Broadcast error: {ex.Message}");
+                        Console.WriteLine($"[Discovery] Broadcast note: {ex.Message}");
                     }
                 }
 
                 try
                 {
-                    await Task.Delay(3000, token);
+                    await Task.Delay(1500, token);
                 }
                 catch (TaskCanceledException)
                 {
@@ -124,6 +133,41 @@ namespace Mousely.Tray.Server
                     }
                 }
             }
+        }
+
+        public static List<IPAddress> GetBroadcastAddresses()
+        {
+            var list = new List<IPAddress> { IPAddress.Broadcast };
+            try
+            {
+                var interfaces = NetworkInterface.GetAllNetworkInterfaces()
+                    .Where(ni => ni.OperationalStatus == OperationalStatus.Up &&
+                                 ni.NetworkInterfaceType != NetworkInterfaceType.Loopback &&
+                                 !ni.Description.ToLowerInvariant().Contains("virtual") &&
+                                 !ni.Description.ToLowerInvariant().Contains("pseudo"));
+
+                foreach (var ni in interfaces)
+                {
+                    var ipProps = ni.GetIPProperties();
+                    foreach (var u in ipProps.UnicastAddresses)
+                    {
+                        if (u.Address.AddressFamily == AddressFamily.InterNetwork && u.IPv4Mask != null)
+                        {
+                            byte[] ipBytes = u.Address.GetAddressBytes();
+                            byte[] maskBytes = u.IPv4Mask.GetAddressBytes();
+                            byte[] broadcastBytes = new byte[ipBytes.Length];
+                            for (int i = 0; i < ipBytes.Length; i++)
+                            {
+                                broadcastBytes[i] = (byte)(ipBytes[i] | ~maskBytes[i]);
+                            }
+                            list.Add(new IPAddress(broadcastBytes));
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            return list.Distinct().ToList();
         }
 
         public static string GetLocalIpAddress()

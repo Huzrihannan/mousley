@@ -1,18 +1,21 @@
 import Foundation
 import Network
 
-struct DiscoveredServer {
+struct DiscoveredServer: Equatable {
     let name: String
     let ip: String
     let port: Int
+
+    static func == (lhs: DiscoveredServer, rhs: DiscoveredServer) -> Bool {
+        return lhs.ip == rhs.ip && lhs.port == rhs.port
+    }
 }
 
 class NetworkDiscovery {
     private var listener: NWListener?
-    private var broadcastConnection: NWConnection?
     private var broadcastTimer: Timer?
     private let discoveryPort: NWEndpoint.Port = 58921
-    private let queue = DispatchQueue(label: "com.mousely.discovery", qos: .userInitiated)
+    private let queue = DispatchQueue(label: "com.mousely.discovery", qos: .userInteractive)
 
     var onServerDiscovered: ((DiscoveredServer) -> Void)?
 
@@ -34,9 +37,9 @@ class NetworkDiscovery {
             listener?.stateUpdateHandler = { state in
                 switch state {
                 case .ready:
-                    print("[Discovery] Listening on UDP port \(self.discoveryPort)")
+                    print("[Discovery] iOS UDP Listener active on port \(self.discoveryPort)")
                 case .failed(let error):
-                    print("[Discovery] Listener failed: \(error.localizedDescription)")
+                    print("[Discovery] iOS Listener failed: \(error.localizedDescription)")
                 default:
                     break
                 }
@@ -44,7 +47,7 @@ class NetworkDiscovery {
 
             listener?.start(queue: queue)
         } catch {
-            print("[Discovery] Unable to create NWListener: \(error.localizedDescription)")
+            print("[Discovery] Unable to start NWListener: \(error.localizedDescription)")
         }
     }
 
@@ -82,7 +85,8 @@ class NetworkDiscovery {
 
     private func startBroadcastingQueries() {
         sendBroadcastQuery()
-        broadcastTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
+        // Broadcast every 1.5s for fast response
+        broadcastTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
             self?.sendBroadcastQuery()
         }
     }

@@ -8,16 +8,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="icon" type="image/png" href="assets/logo.png">
   <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="liquid-glass/glass.css">
 </head>
 <body>
-  <!-- Ambient background mesh lighting -->
-  <div class="ambient-mesh">
-    <div class="orb orb-1"></div>
-    <div class="orb orb-2"></div>
-    <div class="orb orb-3"></div>
-  </div>
-
   <div class="app-landscape-root">
     <!-- Top Navigation Header -->
     <header class="top-header">
@@ -42,17 +34,18 @@
         </button>
       </nav>
 
-      <!-- Connection Status & Settings -->
+      <!-- Connection Status & Desktop Selector Button -->
       <div class="header-right-group">
-        <div class="status-badge" id="statusBadge" onclick="openDeviceModal()">
+        <div class="status-badge" id="statusBadge" onclick="showDesktopSelector()">
           <span class="status-dot" id="statusDot"></span>
-          <span class="device-name" id="statusDeviceName">Searching PC...</span>
+          <span class="device-name" id="statusDeviceName">Select Desktop</span>
           <span class="latency-tag" id="latencyTag">-- ms</span>
         </div>
-        <button class="header-action-btn" id="btnSettings" onclick="openDeviceModal()" title="Select PC / Pair">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        <button class="header-action-btn" id="btnSettings" onclick="showDesktopSelector()" title="Switch Desktop">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+            <line x1="8" y1="21" x2="16" y2="21"></line>
+            <line x1="12" y1="17" x2="12" y2="21"></line>
           </svg>
         </button>
       </div>
@@ -148,7 +141,7 @@
             <!-- Block 1: Browser -->
             <button class="glass-app-block" onclick="launchApp(1, 'Browser')">
               <div class="block-icon-wrap icon-blue">
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
               </div>
               <div class="block-text">
                 <span class="block-name">Browser</span>
@@ -159,7 +152,7 @@
             <!-- Block 2: Spotify -->
             <button class="glass-app-block" onclick="launchApp(2, 'Spotify')">
               <div class="block-icon-wrap icon-green">
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M8 11.5c3.5-1 7.5-.5 10.5 1"></path><path d="M7 14.5c3-.8 6.5-.4 9.5.8"></path><path d="M9 8.5c4-1.2 9-.8 12.5 1"></path></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M8 11.5c3.5-1 7.5-.5 10.5 1"></path><path d="M7 14.5c3-.8 6.5-.4 9.5.8"></path><path d="M9 8.5c4-1.2 9-.8 12.5 1"></path></svg>
               </div>
               <div class="block-text">
                 <span class="block-name">Spotify</span>
@@ -170,7 +163,7 @@
             <!-- Block 3: File Explorer -->
             <button class="glass-app-block" onclick="launchApp(3, 'Explorer')">
               <div class="block-icon-wrap icon-amber">
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
               </div>
               <div class="block-text">
                 <span class="block-name">Explorer</span>
@@ -181,7 +174,7 @@
             <!-- Block 4: Task Manager -->
             <button class="glass-app-block" onclick="launchApp(4, 'Task Manager')">
               <div class="block-icon-wrap icon-purple">
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
               </div>
               <div class="block-text">
                 <span class="block-name">Task Manager</span>
@@ -192,7 +185,7 @@
             <!-- Block 5: Terminal -->
             <button class="glass-app-block" onclick="launchApp(5, 'Terminal')">
               <div class="block-icon-wrap icon-slate">
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
               </div>
               <div class="block-text">
                 <span class="block-name">Terminal</span>
@@ -203,7 +196,7 @@
             <!-- Block 6: Calculator -->
             <button class="glass-app-block" onclick="launchApp(6, 'Calculator')">
               <div class="block-icon-wrap icon-rose">
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="16" y1="14" x2="16" y2="18"></line><line x1="8" y1="10" x2="8.01" y2="10"></line><line x1="12" y1="10" x2="12.01" y2="10"></line><line x1="16" y1="10" x2="16.01" y2="10"></line><line x1="8" y1="14" x2="8.01" y2="14"></line><line x1="12" y1="14" x2="12.01" y2="14"></line><line x1="8" y1="18" x2="8.01" y2="18"></line><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="16" y1="14" x2="16" y2="18"></line><line x1="8" y1="10" x2="8.01" y2="10"></line><line x1="12" y1="10" x2="12.01" y2="10"></line><line x1="16" y1="10" x2="16.01" y2="10"></line><line x1="8" y1="14" x2="8.01" y2="14"></line><line x1="12" y1="14" x2="12.01" y2="14"></line><line x1="8" y1="18" x2="8.01" y2="18"></line><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
               </div>
               <div class="block-text">
                 <span class="block-name">Calculator</span>
@@ -214,7 +207,7 @@
             <!-- Block 7: Notepad -->
             <button class="glass-app-block" onclick="launchApp(7, 'Notepad')">
               <div class="block-icon-wrap icon-indigo">
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
               </div>
               <div class="block-text">
                 <span class="block-name">Notepad</span>
@@ -225,7 +218,7 @@
             <!-- Block 8: Windows Settings -->
             <button class="glass-app-block" onclick="launchApp(8, 'Settings')">
               <div class="block-icon-wrap icon-cyan">
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
               </div>
               <div class="block-text">
                 <span class="block-name">Settings</span>
@@ -254,7 +247,6 @@
                 <span class="clip-title">Copy</span>
                 <span class="clip-hint">Copy current selection</span>
               </div>
-              <div class="clip-glow-indicator"></div>
             </button>
 
             <!-- Block 2: Ctrl + V -->
@@ -268,7 +260,6 @@
                 <span class="clip-title">Paste</span>
                 <span class="clip-hint">Paste clipboard content</span>
               </div>
-              <div class="clip-glow-indicator"></div>
             </button>
 
             <!-- Block 3: Win + V -->
@@ -282,7 +273,6 @@
                 <span class="clip-title">Clipboard History</span>
                 <span class="clip-hint">Open Windows clipboard modal</span>
               </div>
-              <div class="clip-glow-indicator"></div>
             </button>
           </div>
         </section>
@@ -304,34 +294,36 @@
     </footer>
   </div>
 
-  <!-- Device Discovery & Connection Modal -->
-  <div class="modal-overlay" id="deviceModal">
-    <div class="modal-sheet">
-      <div class="modal-header">
-        <h3 class="modal-title">Connect to Windows PC</h3>
-        <button class="modal-close-btn" onclick="closeDeviceModal()">✕</button>
+  <!-- ================= LAUNCH DESKTOP SELECTOR OVERLAY ================= -->
+  <div class="desktop-launch-overlay" id="desktopLaunchOverlay">
+    <div class="desktop-launch-card">
+      <div class="launch-header">
+        <div class="launch-title-wrap">
+          <div class="launch-title">
+            <span>🖥️ Select Desktop</span>
+            <div class="radar-spinner" title="Scanning Wi-Fi..."></div>
+          </div>
+          <span class="launch-subtitle" id="discoverySubtitle">Looking for Mousely on your Wi-Fi...</span>
+        </div>
+        <button class="header-action-btn" onclick="hideDesktopSelector()" title="Dismiss">✕</button>
       </div>
 
-      <div class="device-list" id="discoveredList">
-        <div class="device-item" style="color: var(--text-secondary); justify-content: center;">
-          Scanning local Wi-Fi for Mousely...
+      <!-- Discovered Desktops List -->
+      <div class="desktop-devices-list" id="desktopDevicesList">
+        <div class="desktop-item-card" style="justify-content: center; color: var(--text-secondary); cursor: default;">
+          <span>Searching local network...</span>
         </div>
       </div>
 
-      <div class="manual-connect-form">
-        <h4>Manual IP Connection</h4>
-        <div class="input-row">
-          <input type="text" class="ip-input" id="manualIpInput" placeholder="192.168.1.xxx:8089">
-          <button class="btn-primary" onclick="connectManual()">Connect</button>
-        </div>
+      <!-- Manual IP Entry Fallback -->
+      <div class="launch-manual-row">
+        <input type="text" class="launch-manual-input" id="manualIpInput" placeholder="Enter IP (e.g. 192.168.1.100:8089)">
+        <button class="btn-manual-connect" onclick="connectManual()">Connect</button>
       </div>
     </div>
   </div>
 
-  <!-- Scripts -->
-  <script src="liquid-glass/html2canvas.min.js"></script>
-  <script src="liquid-glass/container.js"></script>
-  <script src="liquid-glass/button.js"></script>
+  <!-- Ultra-Fast Zero-Lag App Logic -->
   <script src="app.js"></script>
 </body>
 </html>
