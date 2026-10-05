@@ -1,0 +1,19 @@
+# .NET build artifacts
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# iOS Xcode build artifacts
+build/
+DerivedData/
+*.ipa
+Payload/
+*.xcuserstate
+xcuserdata/
+
+# OS files
+Thumbs.db
+.DS_Store
+*.log
