@@ -1,0 +1,161 @@
+name: Build & Release (iOS IPA + Windows EXE)
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release Tag (e.g. v1.0.0)'
+        required: false
+        default: 'v1.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  build-ios:
+    name: Build iOS IPA (iPhone 7 Plus / Unsigned)
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Select Xcode Version
+        run: |
+          sudo xcode-select -s /Applications/Xcode_15.4.app || sudo xcode-select -s /Applications/Xcode_16.0.app || true
+          xcodebuild -version
+
+      - name: Build with xcodebuild
+        run: |
+          xcodebuild -project ios/Mousely/Mousely.xcodeproj \
+            -scheme Mousely \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination "generic/platform=iOS" \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES \
+            clean build
+
+      - name: Package Mousely.ipa
+        run: |
+          APP_PATH=$(find build/Build/Products/Release-iphoneos -name "Mousely.app" | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "Error: Mousely.app not found!"
+            exit 1
+          fi
+          echo "Packaging: $APP_PATH"
+          mkdir -p Payload
+          cp -R "$APP_PATH" Payload/
+          zip -r -y Mousely.ipa Payload
+          echo "Successfully created Mousely.ipa!"
+
+      - name: Upload iOS IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa-artifact
+          path: Mousely.ipa
+          retention-days: 14
+
+  build-windows:
+    name: Build Windows Executable & Package
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish Windows App
+        run: |
+          dotnet publish windows/Mousely.Tray/Mousely.Tray.csproj -c Release -r win-x64 --self-contained false -o release-dist
+
+      - name: Prepare Windows Assets
+        shell: pwsh
+        run: |
+          Copy-Item "release-dist\Mousely.exe" "Mousely.exe"
+          Compress-Archive -Path release-dist\* -DestinationPath Mousely-Windows-Tray-x64.zip
+
+      - name: Upload Windows Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-binaries-artifact
+          path: |
+            Mousely.exe
+            Mousely-Windows-Tray-x64.zip
+          retention-days: 14
+
+  publish-release:
+    name: Publish to GitHub Releases
+    needs: [ build-ios, build-windows ]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download iOS Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ios-ipa-artifact
+          path: release-binaries
+
+      - name: Download Windows Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-binaries-artifact
+          path: release-binaries
+
+      - name: Compute Release Tag
+        id: vars
+        shell: bash
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+          elif [[ -n "${{ github.event.inputs.tag_name }}" ]]; then
+            TAG="${{ github.event.inputs.tag_name }}"
+          else
+            TAG="v1.0.0"
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Using tag: $TAG"
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.vars.outputs.tag }}
+          name: Mousely Release ${{ steps.vars.outputs.tag }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            release-binaries/Mousely.ipa
+            release-binaries/Mousely.exe
+            release-binaries/Mousely-Windows-Tray-x64.zip
+          body: |
+            ## 🎵 Mousely Media Remote Release
+
+            ### 📦 Direct Downloads:
+            - 🍏 **[`Mousely.ipa`](https://github.com/${{ github.repository }}/releases/download/${{ steps.vars.outputs.tag }}/Mousely.ipa)**: Native iOS app for **iPhone 7 Plus** and iOS 15.0+ devices. Unsigned and ready for sideloading via TrollStore, AltStore, Sideloadly, or Scarlet.
+            - 🖥️ **[`Mousely.exe`](https://github.com/${{ github.repository }}/releases/download/${{ steps.vars.outputs.tag }}/Mousely.exe)**: Standalone Windows tray application.
+            - 📦 **[`Mousely-Windows-Tray-x64.zip`](https://github.com/${{ github.repository }}/releases/download/${{ steps.vars.outputs.tag }}/Mousely-Windows-Tray-x64.zip)**: Complete Windows distribution package.
+
+            ---
+
+            ### ✨ Key Features:
+            - **📱 Landscape Exclusive**: Engineered for iPhone 7 Plus widescreen display (736×414 pt).
+            - **✌️ 2-Finger Swipe Navigation**: Effortlessly glide between 3 pages:
+              1. **🎵 Page 1 — Media Control**: GSMTC live playback, scrubber, album art, and instant bidirectional volume sync (<5ms).
+              2. **🚀 Page 2 — Mission Control (8 Blocks)**: 1-tap launcher for Browser, Spotify, File Explorer, Task Manager, Terminal, Calculator, Notepad, and Settings.
+              3. **📋 Page 3 — Quick Action Blocks (3 Blocks)**: Direct simulation of `Ctrl + C`, `Ctrl + V`, and `Win + V`.
+            - **🍏 Liquid Glass UI**: Apple-inspired WebGL refraction effects powered by `liquid-glass-js`.
+            - **🔍 Zero-Config Local Wi-Fi**: UDP broadcast beacon auto-discovers your PC.
