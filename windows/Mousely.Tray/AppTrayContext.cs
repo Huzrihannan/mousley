@@ -201,6 +201,12 @@ namespace Mousely.Tray
         // Dynamically creates a crisp, stylish system tray icon
         private static Icon CreateTrayIcon()
         {
+            string icoPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "icon.ico");
+            if (File.Exists(icoPath))
+            {
+                try { return new Icon(icoPath); } catch { }
+            }
+
             using var bmp = new Bitmap(32, 32);
             using (var g = Graphics.FromImage(bmp))
             {

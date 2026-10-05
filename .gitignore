@@ -13,7 +13,9 @@ Payload/
 *.xcuserstate
 xcuserdata/
 
-# OS files
+# Windows published output
+windows-release/
+release-dist/
 Thumbs.db
 .DS_Store
 *.log

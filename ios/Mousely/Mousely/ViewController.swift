@@ -11,6 +11,18 @@ class ViewController: UIViewController, WKScriptMessageHandler, WKNavigationDele
         return .darkContent
     }
 
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        return .landscape
+    }
+
+    override var preferredInterfaceOrientationForPresentation: UIInterfaceOrientation {
+        return .landscapeRight
+    }
+
+    override var shouldAutorotate: Bool {
+        return true
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
         setupWebView()

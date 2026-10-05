@@ -311,6 +311,19 @@ namespace Mousely.Tray.Server
                             await _mediaManager.SeekAsync(pos);
                         }
                         break;
+
+                    case "launch_app":
+                        int slot = root.TryGetProperty("slot", out var slotProp) ? slotProp.GetInt32() : 1;
+                        string? cmd = root.TryGetProperty("command", out var cmdProp) ? cmdProp.GetString() : null;
+                        ShortcutManager.LaunchSlot(slot, cmd);
+                        break;
+
+                    case "clipboard_action":
+                        string clipType = root.TryGetProperty("type", out var typeProp) ? typeProp.GetString() ?? "" : "";
+                        if (clipType == "copy") ShortcutManager.SendCopy();
+                        else if (clipType == "paste") ShortcutManager.SendPaste();
+                        else if (clipType == "history") ShortcutManager.SendClipboardHistory();
+                        break;
                 }
             }
             catch (Exception ex)

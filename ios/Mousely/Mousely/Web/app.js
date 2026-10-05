@@ -1,4 +1,4 @@
-// Mousely - Ultra-Responsive Media & Volume Controller
+// Mousely - Ultra-Responsive Landscape Media, Mission Control & Clipboard Controller
 (function() {
   'use strict';
 
@@ -21,13 +21,22 @@
   let discoveredServers = new Map();
   let volumeThrottleTimer = null;
 
+  // Carousel & Gesture State
+  let currentPage = 0; // 0: Media, 1: Mission Control, 2: Clipboard
+  let isTwoFingerGesture = false;
+  let twoFingerStartX = 0;
+  let twoFingerLastX = 0;
+
   // DOM Elements
+  const carouselTrack = document.getElementById('carouselTrack');
+  const navTabs = document.getElementById('navTabs');
+  const carouselDots = document.getElementById('carouselDots');
+  
   const statusBadge = document.getElementById('statusBadge');
   const statusDot = document.getElementById('statusDot');
   const statusDeviceName = document.getElementById('statusDeviceName');
   const latencyTag = document.getElementById('latencyTag');
   
-  const playerCard = document.getElementById('playerCard');
   const albumArtImg = document.getElementById('albumArtImg');
   const sourceAppPill = document.getElementById('sourceAppPill');
   const trackTitle = document.getElementById('trackTitle');
@@ -55,7 +64,7 @@
   const discoveredList = document.getElementById('discoveredList');
   const manualIpInput = document.getElementById('manualIpInput');
 
-  // Haptic feedback trigger (bridges to iOS Swift native or web vibration)
+  // Haptic feedback trigger
   function triggerHaptic(style = 'light') {
     try {
       if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.nativeApp) {
@@ -73,6 +82,87 @@
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   }
+
+  // --- Carousel & Page Navigation ---
+  window.switchPage = function(pageIndex) {
+    if (pageIndex < 0 || pageIndex > 2) return;
+    currentPage = pageIndex;
+
+    // Slide carousel
+    const offsetPercent = pageIndex * 33.333333;
+    carouselTrack.style.transform = `translateX(-${offsetPercent}%)`;
+
+    // Update Navigation Tabs
+    const tabs = navTabs.querySelectorAll('.nav-tab');
+    tabs.forEach((tab, idx) => {
+      if (idx === pageIndex) {
+        tab.classList.add('active');
+      } else {
+        tab.classList.remove('active');
+      }
+    });
+
+    // Update Dots
+    const dots = carouselDots.querySelectorAll('.dot');
+    dots.forEach((dot, idx) => {
+      if (idx === pageIndex) {
+        dot.classList.add('active');
+      } else {
+        dot.classList.remove('active');
+      }
+    });
+
+    triggerHaptic('light');
+  };
+
+  // --- Two-Finger Swipe Gesture Detection ---
+  document.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+      isTwoFingerGesture = true;
+      twoFingerStartX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      twoFingerLastX = twoFingerStartX;
+    } else {
+      isTwoFingerGesture = false;
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchmove', (e) => {
+    if (isTwoFingerGesture && e.touches.length === 2) {
+      twoFingerLastX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchend', (e) => {
+    if (isTwoFingerGesture) {
+      const deltaX = twoFingerLastX - twoFingerStartX;
+      if (deltaX < -50) {
+        // Swiped left -> next page
+        if (currentPage < 2) {
+          window.switchPage(currentPage + 1);
+        }
+      } else if (deltaX > 50) {
+        // Swiped right -> prev page
+        if (currentPage > 0) {
+          window.switchPage(currentPage - 1);
+        }
+      }
+      isTwoFingerGesture = false;
+    }
+  }, { passive: true });
+
+  // --- Page 2: Mission Control (8 Blocks) ---
+  window.launchApp = function(slot, name) {
+    triggerHaptic('medium');
+    console.log(`Launching app slot ${slot}: ${name}`);
+    sendCommand('launch_app', { slot: slot, name: name });
+  };
+
+  // --- Page 3: Clipboard Actions (3 Blocks) ---
+  window.triggerClipboardAction = function(type) {
+    triggerHaptic('medium');
+    console.log(`Triggering clipboard action: ${type}`);
+    sendCommand('clipboard_action', { type: type });
+  };
 
   // --- WebSocket Connection ---
   function connectWebSocket(host) {
@@ -114,8 +204,6 @@
       reconnectAttempts = 0;
       statusDot.className = 'status-dot online';
       triggerHaptic('medium');
-      
-      // Start ping loop
       sendPing();
     };
 
@@ -165,7 +253,7 @@
     setTimeout(sendPing, 2500);
   }
 
-  // --- Handle Incoming Messages from Windows ---
+  // --- Handle Server Messages ---
   function handleServerMessage(msg) {
     switch (msg.type) {
       case 'pong':
@@ -221,7 +309,6 @@
     volumeFill.style.width = `${currentVolume}%`;
     volumeBadge.textContent = `${currentVolume}%`;
 
-    // Throttle messages over WebSocket to 25ms during drag
     if (!volumeThrottleTimer) {
       volumeThrottleTimer = setTimeout(() => {
         sendCommand('set_volume', { value: currentVolume });
@@ -238,7 +325,6 @@
     triggerHaptic('light');
   }
 
-  // Volume slider interaction
   function handleVolumeTouch(e) {
     const rect = volumeTrack.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -269,7 +355,6 @@
   volumeTrack.addEventListener('pointerup', finishVolumeDrag);
   volumeTrack.addEventListener('pointercancel', finishVolumeDrag);
 
-  // Quick Presets
   window.setVolumePreset = function(val) {
     commitVolume(val);
   };
@@ -285,13 +370,7 @@
     window.toggleMute();
   });
 
-  document.getElementById('btnVolMax').addEventListener('click', () => {
-    commitVolume(100);
-  });
-
-  // Native Volume from iOS Physical Volume Buttons
   window.onNativeVolumeChanged = function(newVolumePercent) {
-    console.log('Hardware volume button pressed:', newVolumePercent);
     if (!isDraggingVolume) {
       commitVolume(newVolumePercent);
     }
@@ -301,42 +380,28 @@
   function updateMediaUI(media) {
     if (!media) return;
 
-    if (media.title) {
-      trackTitle.textContent = media.title;
-    } else {
-      trackTitle.textContent = 'No Media Playing';
-    }
-
-    if (media.artist) {
-      trackArtist.textContent = media.artist + (media.album ? ` • ${media.album}` : '');
-    } else {
-      trackArtist.textContent = 'Windows Media Session';
-    }
+    trackTitle.textContent = media.title || 'No Media Playing';
+    trackArtist.textContent = media.artist ? (media.artist + (media.album ? ` • ${media.album}` : '')) : 'Windows Media Session';
 
     if (media.source) {
       sourceAppPill.textContent = media.source;
     }
 
-    // Playback state
     isPlaying = !!media.isPlaying;
     if (isPlaying) {
       playIcon.style.display = 'none';
       pauseIcon.style.display = 'block';
-      playerCard.classList.add('playing');
     } else {
       playIcon.style.display = 'block';
       pauseIcon.style.display = 'none';
-      playerCard.classList.remove('playing');
     }
 
-    // Artwork
     if (media.artwork) {
       albumArtImg.src = media.artwork;
     } else if (media.hasArtwork && serverHost) {
       albumArtImg.src = `http://${serverHost}/api/artwork?t=${Date.now()}`;
     }
 
-    // Timeline
     if (media.duration !== undefined) {
       duration = media.duration;
     }
@@ -358,7 +423,6 @@
     timelineProgress.style.width = `${Math.min(100, Math.max(0, percent))}%`;
   }
 
-  // Smooth local timeline ticker while playing
   clearInterval(timelineTimer);
   timelineTimer = setInterval(() => {
     if (isPlaying && duration > 0 && !isScrubbingTimeline) {
@@ -370,7 +434,6 @@
     }
   }, 500);
 
-  // Timeline scrubber interaction
   function handleTimelineScrub(e) {
     if (duration <= 0) return;
     const rect = timelineBar.getBoundingClientRect();
@@ -385,7 +448,6 @@
   timelineBar.addEventListener('pointerdown', (e) => {
     if (duration <= 0) return;
     isScrubbingTimeline = true;
-    playerCard.classList.add('scrubbing');
     timelineBar.setPointerCapture(e.pointerId);
     handleTimelineScrub(e);
   });
@@ -399,7 +461,6 @@
   const finishTimelineScrub = (e) => {
     if (isScrubbingTimeline) {
       isScrubbingTimeline = false;
-      playerCard.classList.remove('scrubbing');
       sendCommand('seek', { position: currentPosition });
       lastPositionUpdate = performance.now();
       triggerHaptic('light');
@@ -409,18 +470,15 @@
   timelineBar.addEventListener('pointerup', finishTimelineScrub);
   timelineBar.addEventListener('pointercancel', finishTimelineScrub);
 
-  // Playback Control Buttons
   btnPlayPause.addEventListener('click', () => {
     triggerHaptic('medium');
     isPlaying = !isPlaying;
     if (isPlaying) {
       playIcon.style.display = 'none';
       pauseIcon.style.display = 'block';
-      playerCard.classList.add('playing');
     } else {
       playIcon.style.display = 'block';
       pauseIcon.style.display = 'none';
-      playerCard.classList.remove('playing');
     }
     sendCommand('play_pause');
   });
@@ -452,7 +510,6 @@
     discoveredServers.set(key, serverInfo);
     renderDiscoveredList();
 
-    // Auto-connect if currently disconnected
     if (!isConnected) {
       connectWebSocket(key);
     }
@@ -501,26 +558,20 @@
   function initLiquidGlass() {
     try {
       if (typeof Container !== 'undefined' && typeof Button !== 'undefined') {
-        console.log('Initializing Liquid Glass components...');
-        // Wrap interactive elements with glass shader containers if supported
-        const glassConfig = {
+        window.glassControls = {
           edgeIntensity: 0.025,
           rimIntensity: 0.08,
           blurRadius: 8.0,
           tintOpacity: 0.15
         };
-        window.glassControls = glassConfig;
       }
-    } catch (e) {
-      console.warn('Liquid glass initialization note:', e);
-    }
+    } catch (e) {}
   }
 
   // Bootstrapping
   window.addEventListener('DOMContentLoaded', () => {
     initLiquidGlass();
 
-    // Default connection
     const defaultHost = localStorage.getItem('mousely_last_host') || 
                         (window.location.host && !window.location.protocol.startsWith('file') ? window.location.host : '');
     if (defaultHost) {

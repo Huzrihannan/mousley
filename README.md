@@ -6,28 +6,28 @@
 
 ## ✨ Features
 
+- **📱 Landscape-Exclusive Experience**:
+  - Permanently optimized for widescreen landscape view (iPhone 7 Plus 736×414 pt).
+- **✌️ 2-Finger Swipe Page Navigation**:
+  - Seamlessly switch between the 3 dedicated pages with a 2-finger horizontal swipe or the segmented liquid glass tabs:
+    1. **🎵 Page 1 — Media Control**: Full GSMTC playback (Spotify, YouTube, VLC, Apple Music), album artwork, live scrubber, and instant bidirectional volume sync (<5ms).
+    2. **🚀 Page 2 — Mission Control (8 Blocks)**: 8 liquid glass app launch blocks to trigger Browser, Spotify, File Explorer, Task Manager, Terminal, Calculator, Notepad, and Windows Settings with 1 tap.
+    3. **📋 Page 3 — Quick Action Blocks (3 Blocks)**: Giant tactile blocks for `Ctrl + C` (Copy), `Ctrl + V` (Paste), and `Win + V` (Windows Clipboard History).
 - **🎛️ Bidirectional Real-Time Volume Sync**:
   - Direct Windows CoreAudio (WASAPI COM interop) integration.
-  - Changing volume on iPhone instantly adjusts Windows master volume (<5ms latency), and vice versa.
+  - Changing volume on iPhone instantly adjusts Windows master volume, and vice versa.
   - Physical iPhone volume buttons (Volume Up / Down) directly control Windows volume via native `AVAudioSession` observation.
-  - Optimistic UI updates with echo cancellation prevent slider fighting.
-- **⏯️ Full Media Playback Control**:
-  - Integrates with Windows Global System Media Transport Controls (GSMTC).
-  - Compatible with **Spotify**, **Apple Music**, **YouTube / Chrome / Edge**, **Tidal**, **VLC**, and more.
-  - Live album art extraction and streaming.
-  - Scrubbable timeline with live playback position and duration.
-  - Fallback to Win32 media keys (`SendInput`) for legacy players.
-- **🍏 Apple Liquid Glass UI**:
+- **🍏 Apple Liquid Glass UI & Suiting Logo**:
   - Built with [`liquid-glass-js`](https://github.com/dashersw/liquid-glass-js) WebGL refraction shaders.
   - Light, pleasant aesthetic with soft ambient pastel gradients, specular edge highlights, and tactile haptic feedback.
-  - Tailored for the **iPhone 7 Plus** display (414×736 pt) and responsive on all devices.
+  - Custom app logo featuring a glassmorphic mouse with luminous play wave.
 - **🔍 Zero-Config Local Wi-Fi Discovery**:
   - Automatic UDP broadcast beacon discovery (port `58921`) — no need to type IP addresses manually.
-  - Includes QR code and manual IP connection fallbacks.
+- **🖥️ Standalone Windows Executable**:
+  - Includes `Mousely.exe` sitting in the system tray with embedded icon and quick launcher `Start-Mousely.bat`.
 - **📦 GitHub Actions CI/CD (No Apple Developer Signing Needed)**:
   - Pre-configured `.github/workflows/build-ios.yml` compiles the unsigned `.ipa` on macOS runners using `xcodebuild`.
   - Ready for sideloading onto iOS 15 (iPhone 7 Plus) via **TrollStore**, **AltStore**, **Sideloadly**, or **Scarlet**.
-  - Windows background systray executable automatically built via `.github/workflows/build-windows.yml`.
 
 ---
 
