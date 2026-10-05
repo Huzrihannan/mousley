@@ -2,9 +2,12 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Net;
+using System.Net.Sockets;
 using System.Net.WebSockets;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Mousely.Tray.Audio;
@@ -18,8 +21,8 @@ namespace Mousely.Tray.Server
         private readonly string _wwwRootPath;
         private readonly CoreAudioVolume _audioVolume;
         private readonly WindowsMediaManager _mediaManager;
-        
-        private HttpListener? _httpListener;
+
+        private TcpListener? _tcpListener;
         private CancellationTokenSource? _cts;
         private readonly ConcurrentDictionary<Guid, WebSocket> _clients = new();
 
@@ -35,7 +38,6 @@ namespace Mousely.Tray.Server
             _audioVolume = audioVolume;
             _mediaManager = mediaManager;
 
-            // Wire up callbacks for instant broadcasting
             _audioVolume.VolumeChanged += OnVolumeChanged;
             _mediaManager.MediaStateChanged += OnMediaStateChanged;
         }
@@ -43,47 +45,32 @@ namespace Mousely.Tray.Server
         public void Start()
         {
             _cts = new CancellationTokenSource();
-            _httpListener = new HttpListener();
 
             try
             {
-                // Try listening on all interfaces
-                _httpListener.Prefixes.Add($"http://*:{_port}/");
-                _httpListener.Start();
-                Console.WriteLine($"[Server] Listening on http://*:{_port}/");
-            }
-            catch (HttpListenerException)
-            {
-                // Fallback to localhost and plus if admin permissions not elevated
-                _httpListener = new HttpListener();
-                try
-                {
-                    _httpListener.Prefixes.Add($"http://+:{_port}/");
-                    _httpListener.Start();
-                    Console.WriteLine($"[Server] Listening on http://+:{_port}/");
-                }
-                catch
-                {
-                    _httpListener = new HttpListener();
-                    _httpListener.Prefixes.Add($"http://localhost:{_port}/");
-                    _httpListener.Start();
-                    Console.WriteLine($"[Server] Fallback listening on http://localhost:{_port}/");
-                }
-            }
+                _tcpListener = new TcpListener(IPAddress.Any, _port);
+                _tcpListener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+                _tcpListener.Start();
+                Console.WriteLine($"[Server] TcpListener active on 0.0.0.0:{_port} (Non-Admin / Direct Sockets)");
 
-            Task.Run(() => AcceptRequestsLoopAsync(_cts.Token));
+                Task.Run(() => AcceptTcpClientsLoopAsync(_cts.Token));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Server] Failed to bind TcpListener on port {_port}: {ex.Message}");
+            }
         }
 
-        private async Task AcceptRequestsLoopAsync(CancellationToken token)
+        private async Task AcceptTcpClientsLoopAsync(CancellationToken token)
         {
-            while (!token.IsCancellationRequested && _httpListener != null && _httpListener.IsListening)
+            while (!token.IsCancellationRequested && _tcpListener != null)
             {
                 try
                 {
-                    var context = await _httpListener.GetContextAsync();
-                    _ = ProcessRequestContextAsync(context, token);
+                    var tcpClient = await _tcpListener.AcceptTcpClientAsync(token);
+                    _ = HandleIncomingClientAsync(tcpClient, token);
                 }
-                catch (HttpListenerException) when (token.IsCancellationRequested)
+                catch (OperationCanceledException)
                 {
                     break;
                 }
@@ -97,40 +84,100 @@ namespace Mousely.Tray.Server
             }
         }
 
-        private async Task ProcessRequestContextAsync(HttpListenerContext context, CancellationToken token)
+        private async Task HandleIncomingClientAsync(TcpClient client, CancellationToken token)
+        {
+            client.NoDelay = true;
+            var stream = client.GetStream();
+
+            try
+            {
+                // Read HTTP request header
+                var headerBuffer = new byte[8192];
+                int bytesRead = await stream.ReadAsync(headerBuffer, 0, headerBuffer.Length, token);
+                if (bytesRead <= 0)
+                {
+                    client.Close();
+                    return;
+                }
+
+                string requestString = Encoding.UTF8.GetString(headerBuffer, 0, bytesRead);
+                string[] lines = requestString.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+                if (lines.Length == 0)
+                {
+                    client.Close();
+                    return;
+                }
+
+                string requestLine = lines[0];
+                var parts = requestLine.Split(' ');
+                if (parts.Length < 2)
+                {
+                    client.Close();
+                    return;
+                }
+
+                string method = parts[0];
+                string path = parts[1].Split('?')[0];
+
+                // Check for WebSocket Upgrade
+                bool isWebSocket = false;
+                string? secKey = null;
+
+                foreach (var line in lines)
+                {
+                    if (line.StartsWith("Upgrade:", StringComparison.OrdinalIgnoreCase) && line.Contains("websocket", StringComparison.OrdinalIgnoreCase))
+                    {
+                        isWebSocket = true;
+                    }
+                    if (line.StartsWith("Sec-WebSocket-Key:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        secKey = line.Substring("Sec-WebSocket-Key:".Length).Trim();
+                    }
+                }
+
+                if (isWebSocket && !string.IsNullOrEmpty(secKey))
+                {
+                    // Compute WebSocket Accept Hash
+                    string acceptKey = ComputeWebSocketAcceptKey(secKey);
+                    string response = "HTTP/1.1 101 Switching Protocols\r\n" +
+                                      "Upgrade: websocket\r\n" +
+                                      "Connection: Upgrade\r\n" +
+                                      $"Sec-WebSocket-Accept: {acceptKey}\r\n\r\n";
+
+                    byte[] responseBytes = Encoding.UTF8.GetBytes(response);
+                    await stream.WriteAsync(responseBytes, 0, responseBytes.Length, token);
+                    await stream.FlushAsync(token);
+
+                    // Upgrade to WebSocket
+                    var ws = WebSocket.CreateFromStream(stream, isServer: true, subProtocol: null, keepAliveInterval: TimeSpan.FromSeconds(30));
+                    await HandleWebSocketSessionAsync(ws, token);
+                    return;
+                }
+
+                // Handle HTTP Requests
+                await HandleHttpRequestAsync(stream, method, path, token);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Server] Client handling note: {ex.Message}");
+            }
+            finally
+            {
+                try { client.Dispose(); } catch { }
+            }
+        }
+
+        private static string ComputeWebSocketAcceptKey(string secKey)
+        {
+            const string magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+            byte[] hash = SHA1.HashData(Encoding.UTF8.GetBytes(secKey + magic));
+            return Convert.ToBase64String(hash);
+        }
+
+        private async Task HandleHttpRequestAsync(NetworkStream stream, string method, string path, CancellationToken token)
         {
             try
             {
-                var path = context.Request.Url?.AbsolutePath ?? "/";
-
-                // WebSocket endpoint: /ws
-                if (context.Request.IsWebSocketRequest && path == "/ws")
-                {
-                    var wsContext = await context.AcceptWebSocketAsync(subProtocol: null);
-                    _ = HandleWebSocketConnectionAsync(wsContext.WebSocket, token);
-                    return;
-                }
-
-                // API: Artwork
-                if (path == "/api/artwork")
-                {
-                    var artBytes = _mediaManager.CachedArtworkBytes;
-                    if (artBytes != null && artBytes.Length > 0)
-                    {
-                        context.Response.ContentType = "image/jpeg";
-                        context.Response.ContentLength64 = artBytes.Length;
-                        context.Response.Headers.Add("Cache-Control", "no-cache");
-                        await context.Response.OutputStream.WriteAsync(artBytes, token);
-                    }
-                    else
-                    {
-                        context.Response.StatusCode = 404;
-                    }
-                    context.Response.Close();
-                    return;
-                }
-
-                // API: Status JSON
                 if (path == "/api/status")
                 {
                     var stateObj = new
@@ -143,57 +190,64 @@ namespace Mousely.Tray.Server
                     };
                     string json = JsonSerializer.Serialize(stateObj);
                     byte[] jsonBytes = Encoding.UTF8.GetBytes(json);
-                    context.Response.ContentType = "application/json";
-                    context.Response.ContentLength64 = jsonBytes.Length;
-                    await context.Response.OutputStream.WriteAsync(jsonBytes, token);
-                    context.Response.Close();
+                    await WriteHttpResponseAsync(stream, 200, "OK", "application/json", jsonBytes, token);
                     return;
                 }
 
-                // Serve Static Files from wwwroot
-                await ServeStaticFileAsync(context, path);
-            }
-            catch (Exception ex)
-            {
-                try
+                if (path == "/api/artwork")
                 {
-                    context.Response.StatusCode = 500;
-                    context.Response.Close();
+                    var artBytes = _mediaManager.CachedArtworkBytes;
+                    if (artBytes != null && artBytes.Length > 0)
+                    {
+                        await WriteHttpResponseAsync(stream, 200, "OK", "image/jpeg", artBytes, token);
+                    }
+                    else
+                    {
+                        await WriteHttpResponseAsync(stream, 404, "Not Found", "text/plain", Array.Empty<byte>(), token);
+                    }
+                    return;
                 }
-                catch { }
-                Console.WriteLine($"[Server] ProcessRequest error: {ex.Message}");
+
+                // Static File Serving
+                if (path == "/" || string.IsNullOrEmpty(path)) path = "/index.html";
+
+                string relativePath = path.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+                string fullPath = Path.Combine(_wwwRootPath, relativePath);
+
+                if (!File.Exists(fullPath))
+                {
+                    fullPath = Path.Combine(_wwwRootPath, "index.html");
+                }
+
+                if (File.Exists(fullPath))
+                {
+                    byte[] content = await File.ReadAllBytesAsync(fullPath, token);
+                    string contentType = GetContentType(fullPath);
+                    await WriteHttpResponseAsync(stream, 200, "OK", contentType, content, token);
+                }
+                else
+                {
+                    await WriteHttpResponseAsync(stream, 404, "Not Found", "text/plain", Encoding.UTF8.GetBytes("Not Found"), token);
+                }
             }
+            catch { }
         }
 
-        private async Task ServeStaticFileAsync(HttpListenerContext context, string path)
+        private static async Task WriteHttpResponseAsync(NetworkStream stream, int statusCode, string statusMsg, string contentType, byte[] body, CancellationToken token)
         {
-            if (path == "/" || string.IsNullOrEmpty(path))
-            {
-                path = "/index.html";
-            }
+            string header = $"HTTP/1.1 {statusCode} {statusMsg}\r\n" +
+                            $"Content-Type: {contentType}\r\n" +
+                            $"Content-Length: {body.Length}\r\n" +
+                            "Access-Control-Allow-Origin: *\r\n" +
+                            "Connection: close\r\n\r\n";
 
-            string relativePath = path.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
-            string fullPath = Path.Combine(_wwwRootPath, relativePath);
-
-            if (!File.Exists(fullPath))
+            byte[] headerBytes = Encoding.UTF8.GetBytes(header);
+            await stream.WriteAsync(headerBytes, 0, headerBytes.Length, token);
+            if (body.Length > 0)
             {
-                // Fallback to index.html for SPA routing
-                fullPath = Path.Combine(_wwwRootPath, "index.html");
+                await stream.WriteAsync(body, 0, body.Length, token);
             }
-
-            if (File.Exists(fullPath))
-            {
-                context.Response.ContentType = GetContentType(fullPath);
-                byte[] content = await File.ReadAllBytesAsync(fullPath);
-                context.Response.ContentLength64 = content.Length;
-                await context.Response.OutputStream.WriteAsync(content);
-            }
-            else
-            {
-                context.Response.StatusCode = 404;
-            }
-
-            context.Response.Close();
+            await stream.FlushAsync(token);
         }
 
         private static string GetContentType(string filePath)
@@ -209,18 +263,17 @@ namespace Mousely.Tray.Server
                 ".png" => "image/png",
                 ".jpg" or ".jpeg" => "image/jpeg",
                 ".ico" => "image/x-icon",
-                ".gif" => "image/gif",
-                ".woff2" => "font/woff2",
                 _ => "application/octet-stream"
             };
         }
 
-        // --- WebSocket Communication ---
-        private async Task HandleWebSocketConnectionAsync(WebSocket ws, CancellationToken token)
+        // --- WebSocket Session Management ---
+        private async Task HandleWebSocketSessionAsync(WebSocket ws, CancellationToken token)
         {
             var id = Guid.NewGuid();
             _clients.TryAdd(id, ws);
             ConnectedClientsChanged?.Invoke(_clients.Count);
+            Console.WriteLine($"[Server] iPhone connected! Active clients: {_clients.Count}");
 
             try
             {
@@ -254,12 +307,13 @@ namespace Mousely.Tray.Server
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Server] Client error: {ex.Message}");
+                Console.WriteLine($"[Server] Session note: {ex.Message}");
             }
             finally
             {
                 _clients.TryRemove(id, out _);
                 ConnectedClientsChanged?.Invoke(_clients.Count);
+                Console.WriteLine($"[Server] Client disconnected. Active clients: {_clients.Count}");
                 try { ws.Dispose(); } catch { }
             }
         }
@@ -384,7 +438,7 @@ namespace Mousely.Tray.Server
         public void Stop()
         {
             _cts?.Cancel();
-            try { _httpListener?.Stop(); } catch { }
+            try { _tcpListener?.Stop(); } catch { }
             foreach (var kvp in _clients)
             {
                 try { kvp.Value.Dispose(); } catch { }
@@ -397,7 +451,6 @@ namespace Mousely.Tray.Server
             Stop();
             _audioVolume.VolumeChanged -= OnVolumeChanged;
             _mediaManager.MediaStateChanged -= OnMediaStateChanged;
-            try { _httpListener?.Close(); } catch { }
         }
     }
 }

@@ -15,7 +15,7 @@ class NetworkDiscovery {
     private var listener: NWListener?
     private var broadcastTimer: Timer?
     private let discoveryPort: NWEndpoint.Port = 58921
-    private let queue = DispatchQueue(label: "com.mousely.discovery", qos: .userInteractive)
+    private let queue = DispatchQueue(label: "com.mousely.discovery", qos: .utility)
 
     var onServerDiscovered: ((DiscoveredServer) -> Void)?
 
@@ -37,7 +37,7 @@ class NetworkDiscovery {
             listener?.stateUpdateHandler = { state in
                 switch state {
                 case .ready:
-                    print("[Discovery] iOS UDP Listener active on port \(self.discoveryPort)")
+                    print("[Discovery] iOS UDP Listener active on port 58921")
                 case .failed(let error):
                     print("[Discovery] iOS Listener failed: \(error.localizedDescription)")
                 default:
@@ -52,18 +52,18 @@ class NetworkDiscovery {
     }
 
     private func handleIncomingConnection(_ connection: NWConnection) {
+        connection.stateUpdateHandler = { state in
+            if case .failed(_) = state {
+                connection.cancel()
+            }
+        }
         connection.start(queue: queue)
-        receiveNextPacket(from: connection)
-    }
-
-    private func receiveNextPacket(from connection: NWConnection) {
         connection.receiveMessage { [weak self] (content, context, isComplete, error) in
             if let data = content, let jsonString = String(data: data, encoding: .utf8) {
                 self?.parseBeacon(data: data, rawString: jsonString)
             }
-            if error == nil {
-                self?.receiveNextPacket(from: connection)
-            }
+            // Close UDP connection immediately to prevent resource leakage & thermal heating
+            connection.cancel()
         }
     }
 
@@ -75,7 +75,7 @@ class NetworkDiscovery {
         }
 
         let name = json["name"] as? String ?? "Windows PC"
-        let port = json["port"] as? Int ?? 8089
+        let port = json["port"] as? Int ?? 58920
 
         let server = DiscoveredServer(name: name, ip: ip, port: port)
         DispatchQueue.main.async {
@@ -83,11 +83,23 @@ class NetworkDiscovery {
         }
     }
 
-    private func startBroadcastingQueries() {
+    func startBroadcastingQueries() {
         sendBroadcastQuery()
-        // Broadcast every 1.5s for fast response
-        broadcastTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
+        // Broadcast every 3.0s (smooth, low-power, zero heating)
+        broadcastTimer?.invalidate()
+        broadcastTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
             self?.sendBroadcastQuery()
+        }
+    }
+
+    func pauseBroadcastingQueries() {
+        broadcastTimer?.invalidate()
+        broadcastTimer = nil
+    }
+
+    func resumeBroadcastingQueries() {
+        if broadcastTimer == nil {
+            startBroadcastingQueries()
         }
     }
 
@@ -96,20 +108,31 @@ class NetworkDiscovery {
         let connection = NWConnection(to: broadcastEndpoint, using: .udp)
         
         connection.stateUpdateHandler = { state in
-            if case .ready = state {
+            switch state {
+            case .ready:
                 let payload = "MOUSELY_DISCOVER".data(using: .utf8)!
                 connection.send(content: payload, completion: .contentProcessed({ _ in
                     connection.cancel()
                 }))
+            case .failed, .cancelled:
+                connection.cancel()
+            default:
+                break
             }
         }
         
         connection.start(queue: queue)
+
+        // Safety timeout: cancel after 2 seconds
+        queue.asyncAfter(deadline: .now() + 2.0) {
+            if connection.state != .cancelled {
+                connection.cancel()
+            }
+        }
     }
 
     func stop() {
-        broadcastTimer?.invalidate()
-        broadcastTimer = nil
+        pauseBroadcastingQueries()
         listener?.cancel()
         listener = nil
     }

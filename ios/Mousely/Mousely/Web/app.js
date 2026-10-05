@@ -150,13 +150,19 @@
 
   window.onServerDiscovered = function(serverInfo) {
     if (!serverInfo || !serverInfo.ip) return;
-    const hostKey = `${serverInfo.ip}:${serverInfo.port || 8089}`;
+    const defaultPort = 58920;
+    const hostKey = `${serverInfo.ip}:${serverInfo.port || defaultPort}`;
     discoveredServers.set(hostKey, serverInfo);
     renderDiscoveredList();
 
     // Auto-connect on launch if not connected yet
-    const savedHost = localStorage.getItem('mousely_last_host');
-    if (!isConnected) {
+    let savedHost = localStorage.getItem('mousely_last_host');
+    if (savedHost && savedHost.includes(':8089')) {
+      savedHost = savedHost.replace(':8089', `:${defaultPort}`);
+      localStorage.setItem('mousely_last_host', savedHost);
+    }
+
+    if (!isConnected && (!ws || ws.readyState !== WebSocket.CONNECTING)) {
       if (savedHost && savedHost === hostKey) {
         connectToHost(hostKey);
       } else if (discoveredServers.size === 1 && !savedHost) {
@@ -181,7 +187,7 @@
     discoveredServers.forEach((info, host) => {
       const card = document.createElement('div');
       card.className = 'desktop-item-card';
-      card.onclick = () => connectToHost(host);
+      const safeId = host.replace(/[^a-zA-Z0-9]/g, '_');
       card.innerHTML = `
         <div class="desktop-item-left">
           <div class="desktop-icon-badge">🖥️</div>
@@ -190,53 +196,92 @@
             <span class="desktop-pc-ip">${host} • Ready</span>
           </div>
         </div>
-        <button class="btn-connect-pill">Connect ➔</button>
+        <button type="button" class="btn-connect-pill" id="btn-conn-${safeId}">Connect ➔</button>
       `;
+
+      card.onclick = (e) => {
+        e.preventDefault();
+        connectToHost(host);
+      };
+
+      const btn = card.querySelector('.btn-connect-pill');
+      if (btn) {
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          connectToHost(host);
+        };
+      }
+
       desktopDevicesList.appendChild(card);
     });
   }
 
   window.connectToHost = function(host) {
     triggerHaptic('medium');
+    const safeId = host.replace(/[^a-zA-Z0-9]/g, '_');
+    const btn = document.getElementById(`btn-conn-${safeId}`);
+    if (btn) {
+      btn.textContent = 'Connecting...';
+      btn.style.opacity = '0.7';
+    }
+    discoverySubtitle.textContent = `Connecting to ${host}...`;
     connectWebSocket(host);
   };
 
   window.connectManual = function() {
     let input = manualIpInput.value.trim();
     if (!input) return;
-    if (!input.includes(':')) input += ':8089';
+    if (!input.includes(':')) input += ':58920';
     connectToHost(input);
   };
 
   // --- WebSocket Connection ---
+  let reconnectTimer = null;
+  let pingTimer = null;
+
   function connectWebSocket(host) {
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+
     serverHost = host;
     localStorage.setItem('mousely_last_host', host);
 
     if (ws) {
-      try { ws.close(); } catch (e) {}
+      try {
+        ws.onopen = null;
+        ws.onmessage = null;
+        ws.onerror = null;
+        ws.onclose = null;
+        ws.close();
+      } catch (e) {}
+      ws = null;
     }
 
     statusDeviceName.textContent = `Connecting to ${host}...`;
     statusDot.className = 'status-dot';
 
     const wsUrl = `ws://${host}/ws`;
-    console.log(`Connecting to Mousely: ${wsUrl}`);
+    console.log(`[Mousely] Connecting to: ${wsUrl}`);
 
     try {
       ws = new WebSocket(wsUrl);
     } catch (err) {
-      scheduleReconnect();
+      console.warn('[Mousely] WebSocket creation error:', err);
+      handleConnectionFailure(host);
       return;
     }
 
     ws.onopen = function() {
-      console.log('Connected to Windows Desktop!');
+      console.log('[Mousely] Connected to Windows Desktop!');
       isConnected = true;
       reconnectAttempts = 0;
       statusDot.className = 'status-dot online';
       triggerHaptic('medium');
       window.hideDesktopSelector();
+      notifyNativeConnectionState('connected');
       sendPing();
     };
 
@@ -247,25 +292,59 @@
       } catch (err) {}
     };
 
-    ws.onerror = function() {};
+    ws.onerror = function(err) {
+      console.warn('[Mousely] WebSocket error:', err);
+    };
 
     ws.onclose = function() {
       isConnected = false;
       statusDot.className = 'status-dot offline';
       statusDeviceName.textContent = 'Disconnected';
       latencyTag.textContent = '-- ms';
-      scheduleReconnect();
+      notifyNativeConnectionState('disconnected');
+      handleConnectionFailure(host);
     };
   }
 
+  function handleConnectionFailure(host) {
+    const safeId = host.replace(/[^a-zA-Z0-9]/g, '_');
+    const btn = document.getElementById(`btn-conn-${safeId}`);
+    if (btn) {
+      btn.textContent = 'Connect ➔';
+      btn.style.opacity = '1';
+    }
+    discoverySubtitle.textContent = `Could not connect to ${host}. Tap to retry.`;
+
+    scheduleReconnect();
+  }
+
   function scheduleReconnect() {
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+
+    // Stop continuous reconnecting after 4 attempts to prevent battery drain / heating
+    if (reconnectAttempts >= 4) {
+      console.log('[Mousely] Max reconnect attempts reached. Idle until user tap or discovery.');
+      return;
+    }
+
     reconnectAttempts++;
-    const delay = Math.min(1000 * Math.pow(1.5, reconnectAttempts), 4000);
-    setTimeout(() => {
+    const delay = Math.min(2500 * reconnectAttempts, 8000);
+    reconnectTimer = setTimeout(() => {
       if (!isConnected && serverHost) {
         connectWebSocket(serverHost);
       }
     }, delay);
+  }
+
+  function notifyNativeConnectionState(state) {
+    try {
+      if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.nativeApp) {
+        window.webkit.messageHandlers.nativeApp.postMessage({ action: 'connectionState', state: state });
+      }
+    } catch (e) {}
   }
 
   function sendCommand(action, payload = {}) {
@@ -274,10 +353,14 @@
   }
 
   function sendPing() {
+    if (pingTimer) {
+      clearTimeout(pingTimer);
+      pingTimer = null;
+    }
     if (!isConnected || !ws || ws.readyState !== WebSocket.OPEN) return;
     pingStartTime = performance.now();
     sendCommand('ping');
-    setTimeout(sendPing, 2000);
+    pingTimer = setTimeout(sendPing, 3000);
   }
 
   // --- Message Dispatcher ---
@@ -510,7 +593,12 @@
 
   // --- Background Prober on Launch ---
   function probeSubnet() {
-    const savedHost = localStorage.getItem('mousely_last_host');
+    let savedHost = localStorage.getItem('mousely_last_host');
+    if (savedHost && savedHost.includes(':8089')) {
+      savedHost = savedHost.replace(':8089', ':58920');
+      localStorage.setItem('mousely_last_host', savedHost);
+    }
+
     if (savedHost) {
       fetch(`http://${savedHost}/api/status`, { signal: AbortSignal.timeout(1200) })
         .then(r => r.json())
@@ -519,7 +607,7 @@
           window.onServerDiscovered({
             name: data.deviceName || 'Windows PC',
             ip: parts[0],
-            port: parseInt(parts[1] || '8089')
+            port: parseInt(parts[1] || '58920')
           });
         })
         .catch(() => {});
@@ -529,20 +617,21 @@
       window.onServerDiscovered({
         name: 'Windows PC (Host)',
         ip: window.location.hostname,
-        port: parseInt(window.location.port || '8089')
+        port: parseInt(window.location.port || '58920')
       });
     }
   }
 
   // --- Bootstrapping on Launch ---
   window.addEventListener('DOMContentLoaded', () => {
+    // Show desktop selector overlay immediately on launch so user can see detected PCs
+    window.showDesktopSelector();
+
     probeSubnet();
 
     const savedHost = localStorage.getItem('mousely_last_host');
     if (savedHost) {
       connectWebSocket(savedHost);
-    } else {
-      window.showDesktopSelector();
     }
   });
 

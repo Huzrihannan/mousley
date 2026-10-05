@@ -109,6 +109,14 @@ class ViewController: UIViewController, WKScriptMessageHandler, WKNavigationDele
             generator.prepare()
             generator.impactOccurred()
 
+        case "connectionState":
+            let state = body["state"] as? String ?? ""
+            if state == "connected" {
+                networkDiscovery.pauseBroadcastingQueries()
+            } else if state == "disconnected" {
+                networkDiscovery.resumeBroadcastingQueries()
+            }
+
         default:
             break
         }

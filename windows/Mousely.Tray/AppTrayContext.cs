@@ -30,7 +30,7 @@ namespace Mousely.Tray
 
         public AppTrayContext()
         {
-            const int port = 8089;
+            const int port = 58920;
             string wwwRoot = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wwwroot");
 
             // Initialize Core Components

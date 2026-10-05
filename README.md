@@ -75,7 +75,7 @@ Mousely/
    ```
 3. Mousely will appear in your **Windows System Tray** (notification area near the clock).
 4. Right-click the tray icon to:
-   - View local IP and port (default `8089`).
+   - View local IP and port (default `58920`).
    - View active connected devices.
    - Open the **Pairing Dialog / QR Code**.
    - Toggle **Start with Windows**.
@@ -110,7 +110,7 @@ You can also access the exact same Liquid Glass UI directly from Safari on your 
 1. Connect your iPhone to the same Wi-Fi as your PC.
 2. Open Safari and navigate to:
    ```
-   http://<YOUR_PC_IP>:8089
+   http://<YOUR_PC_IP>:58920
    ```
    *(Find `<YOUR_PC_IP>` in the Windows system tray menu or Pairing dialog)*.
 3. Tap **Share** → **Add to Home Screen** for a standalone web app experience!
