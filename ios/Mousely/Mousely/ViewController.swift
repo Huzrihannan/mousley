@@ -1,11 +1,14 @@
 import UIKit
 import WebKit
+import CoreMotion
 
 class ViewController: UIViewController, WKScriptMessageHandler, WKNavigationDelegate {
 
     private var webView: WKWebView!
     private let volumeObserver = VolumeObserver()
     private let networkDiscovery = NetworkDiscovery()
+    private let motionManager = CMMotionManager()
+    private var isMotionTrackingActive = false
 
     override var preferredStatusBarStyle: UIStatusBarStyle {
         return .lightContent
@@ -161,12 +164,38 @@ class ViewController: UIViewController, WKScriptMessageHandler, WKNavigationDele
             let buttons = UInt16(clamping: body["buttons"] as? Int ?? 0)
             UdpInputTransmitter.shared.sendGamepad(stickX: stickX, stickY: stickY, lt: lt, rt: rt, buttons: buttons)
 
+        case "startGyro":
+            startHardwareMotionUpdates()
+
+        case "stopGyro":
+            stopHardwareMotionUpdates()
+
         default:
             break
         }
     }
 
+    private func startHardwareMotionUpdates() {
+        guard motionManager.isDeviceMotionAvailable, !isMotionTrackingActive else { return }
+        isMotionTrackingActive = true
+        motionManager.deviceMotionUpdateInterval = 1.0 / 60.0 // 60Hz
+        motionManager.startDeviceMotionUpdates(to: .main) { [weak self] motion, _ in
+            guard let self = self, let motion = motion else { return }
+            // In Landscape Right: turning the steering wheel rotates around the device pitch axis
+            let rollDeg = -motion.attitude.pitch * (180.0 / .pi)
+            self.webView.evaluateJavaScript("if (window.onNativeGyroUpdate) window.onNativeGyroUpdate(\(rollDeg));", completionHandler: nil)
+        }
+    }
+
+    private func stopHardwareMotionUpdates() {
+        if isMotionTrackingActive {
+            motionManager.stopDeviceMotionUpdates()
+            isMotionTrackingActive = false
+        }
+    }
+
     deinit {
+        stopHardwareMotionUpdates()
         volumeObserver.stop()
         networkDiscovery.stop()
     }

@@ -374,13 +374,28 @@ html, body {
 .header-glass-icon-btn svg { width: 17px; height: 17px; }
 .header-glass-icon-btn:active { transform: scale(0.92); }
 
-/* ================= MAIN CAROUSEL VIEWPORT (3 PAGES) ================= */
+/* Universal Hidden Utility */
+.hidden {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* ================= MAIN CAROUSEL VIEWPORT ================= */
 .carousel-viewport {
   flex: 1;
   width: 100%;
+  min-height: 0;
+  height: 100%;
   overflow: hidden;
   position: relative;
   border-radius: 28px;
+}
+
+.carousel-viewport.hidden {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 .carousel-slider-track {
@@ -1317,7 +1332,8 @@ html, body {
 .game-controller-viewport {
   flex: 1;
   width: 100%;
-  height: calc(100vh - 58px);
+  min-height: 0;
+  height: 100%;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -1338,6 +1354,8 @@ html, body {
 
 .cyber-controller-card {
   flex: 1;
+  min-height: 0;
+  height: 100%;
   display: flex;
   flex-direction: column;
   position: relative;

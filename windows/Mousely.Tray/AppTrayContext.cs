@@ -82,6 +82,10 @@ namespace Mousely.Tray
             var openBrowserItem = new ToolStripMenuItem("🌐 Open Web Controller in Browser", null, OnOpenBrowserClicked);
             _contextMenu.Items.Add(openBrowserItem);
 
+            string gamepadModeStr = GamepadManager.IsViGEmActive ? "🎮 Gamepad: Xbox 360 (ViGEm)" : "🎮 Gamepad: SendInput Hardware Active";
+            var gamepadItem = new ToolStripMenuItem(gamepadModeStr, null, OnGamepadInfoClicked);
+            _contextMenu.Items.Add(gamepadItem);
+
             _contextMenu.Items.Add(new ToolStripSeparator());
 
             _autostartItem = new ToolStripMenuItem("⚙️ Start with Windows", null, OnToggleAutostartClicked)
@@ -145,6 +149,39 @@ namespace Mousely.Tray
                 });
             }
             catch { }
+        }
+
+        private void OnGamepadInfoClicked(object? sender, EventArgs e)
+        {
+            if (GamepadManager.IsViGEmActive)
+            {
+                MessageBox.Show(
+                    "ViGEmBus driver is ACTIVE!\n\nMousely is providing a full virtual Xbox 360 controller natively recognized by Steam, Xbox App, Forza, GTA, EA Sports, and all PC games.",
+                    "Mousely - Gamepad Emulation",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
+            else
+            {
+                var result = MessageBox.Show(
+                    "Mousely Gamepad is operating in DirectInput Hardware mode (SendInput WASD + Space/Shift/Esc/Arrows/PWM Steering) for 100% out-of-the-box compatibility with all games.\n\nWould you like to install the free ViGEmBus driver to enable native virtual Xbox 360 controller emulation for Steam and Xbox games?",
+                    "Mousely - Gamepad Emulation",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question);
+
+                if (result == DialogResult.Yes)
+                {
+                    try
+                    {
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                        {
+                            FileName = "https://github.com/nefarius/ViGEmBus/releases",
+                            UseShellExecute = true
+                        });
+                    }
+                    catch { }
+                }
+            }
         }
 
         private void OnToggleAutostartClicked(object? sender, EventArgs e)

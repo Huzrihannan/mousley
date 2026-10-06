@@ -1118,12 +1118,30 @@
       if (pillModeGame) pillModeGame.classList.add('active');
       if (pillModeRemote) pillModeRemote.classList.remove('active');
       if (navTabs) navTabs.classList.add('theme-green');
-      if (remoteTabsGroup) remoteTabsGroup.classList.add('hidden');
-      if (gameTabsGroup) gameTabsGroup.classList.remove('hidden');
-      if (carouselViewport) carouselViewport.classList.add('hidden');
-      if (gameControllerViewport) gameControllerViewport.classList.remove('hidden');
+      if (remoteTabsGroup) {
+        remoteTabsGroup.classList.add('hidden');
+        remoteTabsGroup.style.display = 'none';
+      }
+      if (gameTabsGroup) {
+        gameTabsGroup.classList.remove('hidden');
+        gameTabsGroup.style.display = 'flex';
+      }
+      if (carouselViewport) {
+        carouselViewport.classList.add('hidden');
+        carouselViewport.style.display = 'none';
+      }
+      if (gameControllerViewport) {
+        gameControllerViewport.classList.remove('hidden');
+        gameControllerViewport.style.display = 'flex';
+      }
 
       requestOrientationPermission();
+      try {
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.nativeApp) {
+          window.webkit.messageHandlers.nativeApp.postMessage({ action: 'startGyro' });
+        }
+      } catch (e) {}
+
       recalibrateGyro();
       startGamepadLoop();
       showToast('Cyberpunk Controller Active', '🎮');
@@ -1132,10 +1150,28 @@
       if (pillModeRemote) pillModeRemote.classList.add('active');
       if (pillModeGame) pillModeGame.classList.remove('active');
       if (navTabs) navTabs.classList.remove('theme-green');
-      if (gameTabsGroup) gameTabsGroup.classList.add('hidden');
-      if (remoteTabsGroup) remoteTabsGroup.classList.remove('hidden');
-      if (gameControllerViewport) gameControllerViewport.classList.add('hidden');
-      if (carouselViewport) carouselViewport.classList.remove('hidden');
+      if (gameTabsGroup) {
+        gameTabsGroup.classList.add('hidden');
+        gameTabsGroup.style.display = 'none';
+      }
+      if (remoteTabsGroup) {
+        remoteTabsGroup.classList.remove('hidden');
+        remoteTabsGroup.style.display = 'flex';
+      }
+      if (gameControllerViewport) {
+        gameControllerViewport.classList.add('hidden');
+        gameControllerViewport.style.display = 'none';
+      }
+      if (carouselViewport) {
+        carouselViewport.classList.remove('hidden');
+        carouselViewport.style.display = 'flex';
+      }
+
+      try {
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.nativeApp) {
+          window.webkit.messageHandlers.nativeApp.postMessage({ action: 'stopGyro' });
+        }
+      } catch (e) {}
 
       stopGamepadLoop();
       showToast('Remote Deck Active', '✨');
@@ -1162,6 +1198,12 @@
     showToast('Gyro Zero-Point Calibrated', '🏎️');
   };
 
+  // Native Swift CoreMotion direct input hook (hardware 60Hz precision)
+  window.onNativeGyroUpdate = function(rollDegrees) {
+    if (masterMode !== 'game') return;
+    updateGyroSteeringAngle(rollDegrees);
+  };
+
   function requestOrientationPermission() {
     if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
       DeviceOrientationEvent.requestPermission()
@@ -1186,21 +1228,31 @@
     if (masterMode !== 'game') return;
 
     let roll = 0;
-    const orient = window.orientation;
-    if (orient === 90) {
-      roll = -e.beta;
-    } else if (orient === -90) {
-      roll = e.beta;
+    let screenAngle = 90;
+    if (window.screen && window.screen.orientation && window.screen.orientation.angle !== undefined) {
+      screenAngle = window.screen.orientation.angle;
+    } else if (window.orientation !== undefined) {
+      screenAngle = window.orientation;
+    }
+
+    if (screenAngle === 90) {
+      roll = e.beta !== null ? -e.beta : 0;
+    } else if (screenAngle === -90 || screenAngle === 270) {
+      roll = e.beta !== null ? e.beta : 0;
     } else {
-      roll = (Math.abs(e.gamma) > Math.abs(e.beta)) ? e.gamma : (e.beta || 0);
+      roll = e.beta !== null ? -e.beta : (e.gamma || 0);
     }
 
     if (isNaN(roll)) return;
+    updateGyroSteeringAngle(roll);
+  }
+
+  function updateGyroSteeringAngle(roll) {
     rawGyroRoll = roll;
 
     let effective = roll - calibratedRollOffset;
-    if (effective > 180) effective -= 360;
-    if (effective < -180) effective += 360;
+    while (effective > 180) effective -= 360;
+    while (effective < -180) effective += 360;
 
     if (Math.abs(effective) < GYRO_DEADZONE_DEG) {
       effective = 0;
@@ -1344,7 +1396,64 @@
       btn.addEventListener('mouseleave', onRelease);
     });
 
-    // 2. Setup Virtual Analog Thumbstick
+    // 2. Enhanced Tactile D-Pad Slide Drag Support
+    const cyberDpad = document.getElementById('cyberDpad');
+    if (cyberDpad) {
+      let activeDpadKey = null;
+
+      function setDpadKey(newKey) {
+        if (activeDpadKey === newKey) return;
+        if (activeDpadKey) {
+          const oldBtn = cyberDpad.querySelector(`[data-gamepad="${activeDpadKey}"]`);
+          if (oldBtn) oldBtn.classList.remove('active', 'pressed');
+          if (BUTTON_BIT_MAP[activeDpadKey] !== undefined) {
+            gamepadButtonMask &= ~(1 << BUTTON_BIT_MAP[activeDpadKey]);
+          }
+        }
+        activeDpadKey = newKey;
+        if (newKey) {
+          const newBtn = cyberDpad.querySelector(`[data-gamepad="${newKey}"]`);
+          if (newBtn) newBtn.classList.add('active', 'pressed');
+          if (BUTTON_BIT_MAP[newKey] !== undefined) {
+            gamepadButtonMask |= (1 << BUTTON_BIT_MAP[newKey]);
+          }
+          triggerHaptic('light');
+        }
+        dispatchGamepadState();
+      }
+
+      function updateDpadFromTouch(touch) {
+        const el = document.elementFromPoint(touch.clientX, touch.clientY);
+        const btn = el ? el.closest('[data-gamepad]') : null;
+        if (btn && btn.parentElement === cyberDpad) {
+          setDpadKey(btn.getAttribute('data-gamepad'));
+        } else {
+          setDpadKey(null);
+        }
+      }
+
+      cyberDpad.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if (e.touches.length > 0) updateDpadFromTouch(e.touches[0]);
+      }, { passive: false });
+
+      cyberDpad.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        if (e.touches.length > 0) updateDpadFromTouch(e.touches[0]);
+      }, { passive: false });
+
+      cyberDpad.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        setDpadKey(null);
+      }, { passive: false });
+
+      cyberDpad.addEventListener('touchcancel', (e) => {
+        e.preventDefault();
+        setDpadKey(null);
+      }, { passive: false });
+    }
+
+    // 3. Setup Virtual Analog Thumbstick
     if (thumbstickZone && thumbstickKnob) {
       let activeTouchId = null;
       let zoneCenterX = 0;
