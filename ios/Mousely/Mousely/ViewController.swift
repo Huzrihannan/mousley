@@ -8,7 +8,7 @@ class ViewController: UIViewController, WKScriptMessageHandler, WKNavigationDele
     private let networkDiscovery = NetworkDiscovery()
 
     override var preferredStatusBarStyle: UIStatusBarStyle {
-        return .darkContent
+        return .lightContent
     }
 
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
@@ -32,7 +32,7 @@ class ViewController: UIViewController, WKScriptMessageHandler, WKNavigationDele
     }
 
     private func setupWebView() {
-        view.backgroundColor = UIColor(red: 240/255.0, green: 244/255.0, blue: 253/255.0, alpha: 1.0)
+        view.backgroundColor = UIColor(red: 10/255.0, green: 2/255.0, blue: 4/255.0, alpha: 1.0)
 
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true

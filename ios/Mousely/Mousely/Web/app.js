@@ -1,8 +1,8 @@
-// Mousely - Ultra-Performance Zero-Lag Liquid Remote Engine (120FPS Fast Touch)
+// Mousely - Ultra-Performance Zero-Lag Liquid Remote Engine (VisionOS & iOS 15+ Edition)
 (function() {
   'use strict';
 
-  // State
+  // ================= STATE =================
   let ws = null;
   let serverHost = window.location.host || '';
   let isConnected = false;
@@ -28,6 +28,7 @@
   let touchStartX = 0;
   let touchStartY = 0;
   let touchDiffX = 0;
+  let touchDiffY = 0;
   let isSwiping = false;
 
   // DOM Elements
@@ -70,7 +71,7 @@
   const desktopDevicesList = document.getElementById('desktopDevicesList');
   const manualIpInput = document.getElementById('manualIpInput');
 
-  // ================= 1. INSTANT ZERO-LATENCY TOUCH DISPATCHER =================
+  // ================= HAPTIC & TOAST NOTIFICATION =================
   function triggerHaptic(style = 'light') {
     try {
       if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.nativeApp) {
@@ -83,7 +84,7 @@
 
   let toastTimer = null;
   function showToast(text, icon = '✨') {
-    if (!appleToast) return;
+    if (!appleToast || !toastIcon || !toastText) return;
     toastIcon.textContent = icon;
     toastText.textContent = text;
     appleToast.classList.add('show');
@@ -100,155 +101,7 @@
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   }
 
-  // Delegated 0ms Touch Activation
-  function setupFastTouchDispatcher() {
-    let activeEl = null;
-
-    document.addEventListener('touchstart', (e) => {
-      const btn = e.target.closest('.fast-touch');
-      if (btn) {
-        activeEl = btn;
-        btn.classList.add('touch-active');
-      }
-    }, { passive: true });
-
-    const clearTouchActive = () => {
-      if (activeEl) {
-        activeEl.classList.remove('touch-active');
-        activeEl = null;
-      }
-    };
-
-    document.addEventListener('touchcancel', clearTouchActive, { passive: true });
-
-    document.addEventListener('touchend', (e) => {
-      if (!activeEl) return;
-      const btn = activeEl;
-      clearTouchActive();
-
-      // Check if touch ended inside the element
-      const changedTouch = e.changedTouches ? e.changedTouches[0] : null;
-      if (changedTouch) {
-        const rect = btn.getBoundingClientRect();
-        if (
-          changedTouch.clientX >= rect.left &&
-          changedTouch.clientX <= rect.right &&
-          changedTouch.clientY >= rect.top &&
-          changedTouch.clientY <= rect.bottom
-        ) {
-          executeFastAction(btn);
-        }
-      }
-    }, { passive: true });
-
-    // Fallback click handler for desktop browser mouse clicks
-    document.addEventListener('click', (e) => {
-      const btn = e.target.closest('.fast-touch');
-      if (btn && !e.sourceCapabilities?.firesTouchEvents) {
-        executeFastAction(btn);
-      }
-    });
-  }
-
-  function executeFastAction(el) {
-    const pageAttr = el.getAttribute('data-page');
-    if (pageAttr !== null) {
-      switchPage(parseInt(pageAttr, 10));
-      return;
-    }
-
-    const action = el.getAttribute('data-action');
-    if (!action) return;
-
-    triggerHaptic('medium');
-
-    switch (action) {
-      case 'play_pause':
-        isPlaying = !isPlaying;
-        if (playIcon) playIcon.style.display = isPlaying ? 'none' : 'block';
-        if (pauseIcon) pauseIcon.style.display = isPlaying ? 'block' : 'none';
-        sendCommand('play_pause');
-        break;
-
-      case 'prev':
-        sendCommand('prev');
-        break;
-
-      case 'next':
-        sendCommand('next');
-        break;
-
-      case 'shuffle':
-        isShuffle = !isShuffle;
-        if (btnShuffle) btnShuffle.classList.toggle('active-mode', isShuffle);
-        showToast(isShuffle ? 'Shuffle On' : 'Shuffle Off', '🔀');
-        sendCommand('shuffle');
-        break;
-
-      case 'repeat':
-        isRepeat = !isRepeat;
-        if (btnRepeat) btnRepeat.classList.toggle('active-mode', isRepeat);
-        showToast(isRepeat ? 'Repeat On' : 'Repeat Off', '🔁');
-        sendCommand('repeat');
-        break;
-
-      case 'favorite':
-        isFavorite = !isFavorite;
-        if (btnHeart) btnHeart.classList.toggle('active-red', isFavorite);
-        showToast(isFavorite ? 'Added to Favorites' : 'Removed from Favorites', '❤️');
-        break;
-
-      case 'mute':
-        isMuted = !isMuted;
-        sendCommand('mute');
-        break;
-
-      case 'app':
-        const slot = parseInt(el.getAttribute('data-slot') || '1', 10);
-        const name = el.getAttribute('data-name') || 'App';
-        showToast(`Launching ${name}...`, '🚀');
-        sendCommand('launch_app', { slot: slot, name: name });
-        break;
-
-      case 'clip':
-        const clipType = el.getAttribute('data-clip');
-        triggerPillAction(clipType);
-        break;
-
-      case 'desktop-selector':
-        showDesktopSelector();
-        break;
-
-      case 'close-modals':
-        hideDesktopSelector();
-        break;
-
-      case 'manual-connect':
-        connectManual();
-        break;
-    }
-  }
-
-  function triggerPillAction(type) {
-    const toastMap = {
-      cut: ['Cut (Ctrl + X)', '✂️'],
-      copy: ['Copied (Ctrl + C)', '📋'],
-      paste: ['Pasting (Ctrl + V)', '📥'],
-      undo: ['Undo (Ctrl + Z)', '↩️'],
-      delete: ['Deleted (Del)', '🗑️'],
-      select_all: ['Selected All (Ctrl + A)', '⬚'],
-      find: ['Find (Ctrl + F)', '🔍'],
-      save: ['Saved (Ctrl + S)', '💾'],
-      screenshot: ['Screenshot (Win + Shift + S)', '📸'],
-      history: ['Clipboard History (Win + V)', '📜']
-    };
-
-    const info = toastMap[type] || ['Action Sent', '✨'];
-    showToast(info[0], info[1]);
-    sendCommand('clipboard_action', { type: type });
-  }
-
-  // ================= 2. CAROUSEL & SWIPE NAVIGATION =================
+  // ================= 1. CAROUSEL & SWIPE NAVIGATION =================
   window.switchPage = function(pageIndex) {
     if (pageIndex < 0 || pageIndex > 2) return;
     currentPage = pageIndex;
@@ -283,6 +136,7 @@
         touchStartX = e.touches[0].clientX;
         touchStartY = e.touches[0].clientY;
         touchDiffX = 0;
+        touchDiffY = 0;
         isSwiping = true;
       }
     }, { passive: true });
@@ -291,29 +145,169 @@
       if (!isSwiping || isDraggingVolume || isScrubbingWaveform) return;
       const currentX = e.touches[0].clientX;
       const currentY = e.touches[0].clientY;
-      const diffX = currentX - touchStartX;
-      const diffY = currentY - touchStartY;
-
-      if (Math.abs(diffX) > Math.abs(diffY)) {
-        touchDiffX = diffX;
-      }
+      touchDiffX = currentX - touchStartX;
+      touchDiffY = currentY - touchStartY;
     }, { passive: true });
 
     carouselViewport.addEventListener('touchend', () => {
       if (!isSwiping) return;
       isSwiping = false;
 
-      const swipeThreshold = 50;
-      if (touchDiffX < -swipeThreshold) {
-        switchPage(Math.min(2, currentPage + 1));
-      } else if (touchDiffX > swipeThreshold) {
-        switchPage(Math.max(0, currentPage - 1));
+      const swipeThreshold = 45;
+      if (Math.abs(touchDiffX) > swipeThreshold && Math.abs(touchDiffX) > Math.abs(touchDiffY) * 1.2) {
+        if (touchDiffX < 0) {
+          window.switchPage(Math.min(2, currentPage + 1));
+        } else {
+          window.switchPage(Math.max(0, currentPage - 1));
+        }
       }
       touchDiffX = 0;
+      touchDiffY = 0;
     }, { passive: true });
   }
 
-  // ================= 3. ULTRA-FAST CSS CLIP WAVEFORM SCRUBBER =================
+  // ================= 2. DESKTOP SELECTOR OVERLAY =================
+  window.showDesktopSelector = function() {
+    triggerHaptic('light');
+    if (desktopLaunchOverlay) {
+      desktopLaunchOverlay.classList.remove('hidden');
+      desktopLaunchOverlay.style.display = 'flex';
+    }
+    probeSubnet();
+    renderDiscoveredServers();
+  };
+
+  window.hideDesktopSelector = function() {
+    if (desktopLaunchOverlay) {
+      desktopLaunchOverlay.classList.add('hidden');
+      desktopLaunchOverlay.style.display = 'none';
+    }
+  };
+
+  window.closeDesktopSelector = function(e) {
+    if (e && e.target === desktopLaunchOverlay) {
+      window.hideDesktopSelector();
+    }
+  };
+
+  window.connectManual = function() {
+    if (!manualIpInput) return;
+    let ip = manualIpInput.value.trim();
+    if (!ip) return;
+    if (!ip.includes(':')) ip += ':58920';
+    connectWebSocket(ip);
+  };
+
+  // ================= 3. MEDIA CONTROLS & TRANSPORT =================
+  window.togglePlayPause = function() {
+    isPlaying = !isPlaying;
+    if (playIcon) playIcon.style.display = isPlaying ? 'none' : 'block';
+    if (pauseIcon) pauseIcon.style.display = isPlaying ? 'block' : 'none';
+    triggerHaptic('medium');
+    sendCommand('play_pause');
+  };
+
+  window.skipPrev = function() {
+    triggerHaptic('light');
+    sendCommand('prev');
+  };
+
+  window.skipNext = function() {
+    triggerHaptic('light');
+    sendCommand('next');
+  };
+
+  window.toggleShuffle = function() {
+    isShuffle = !isShuffle;
+    if (btnShuffle) btnShuffle.classList.toggle('active-mode', isShuffle);
+    showToast(isShuffle ? 'Shuffle On' : 'Shuffle Off', '🔀');
+    triggerHaptic('light');
+    sendCommand('shuffle');
+  };
+
+  window.toggleRepeat = function() {
+    isRepeat = !isRepeat;
+    if (btnRepeat) btnRepeat.classList.toggle('active-mode', isRepeat);
+    showToast(isRepeat ? 'Repeat On' : 'Repeat Off', '🔁');
+    triggerHaptic('light');
+    sendCommand('repeat');
+  };
+
+  window.toggleFavorite = function() {
+    isFavorite = !isFavorite;
+    if (btnHeart) btnHeart.classList.toggle('active-red', isFavorite);
+    showToast(isFavorite ? 'Added to Favorites' : 'Removed from Favorites', '❤️');
+    triggerHaptic('light');
+  };
+
+  window.toggleMute = function() {
+    isMuted = !isMuted;
+    if (volIcon && muteIcon) {
+      volIcon.style.display = isMuted ? 'none' : 'block';
+      muteIcon.style.display = isMuted ? 'block' : 'none';
+    }
+    triggerHaptic('light');
+    sendCommand('mute');
+  };
+
+  // ================= 4. APP LAUNCHER & QUICK ACTIONS =================
+  window.launchApp = function(slot, name) {
+    triggerHaptic('medium');
+    showToast(`Launching ${name}...`, '🚀');
+    sendCommand('launch_app', { slot: slot, name: name });
+  };
+
+  window.triggerPillAction = function(type) {
+    const toastMap = {
+      cut: ['Cut (Ctrl + X)', '✂️'],
+      copy: ['Copied (Ctrl + C)', '📋'],
+      paste: ['Pasting (Ctrl + V)', '📥'],
+      undo: ['Undo (Ctrl + Z)', '↩️'],
+      delete: ['Deleted (Del)', '🗑️'],
+      select_all: ['Selected All (Ctrl + A)', '⬚'],
+      find: ['Find (Ctrl + F)', '🔍'],
+      save: ['Saved (Ctrl + S)', '💾'],
+      screenshot: ['Screenshot (Win + Shift + S)', '📸'],
+      history: ['Clipboard History (Win + V)', '📜']
+    };
+
+    const info = toastMap[type] || ['Action Sent', '✨'];
+    triggerHaptic('medium');
+    showToast(info[0], info[1]);
+    sendCommand('clipboard_action', { type: type });
+  };
+
+  // ================= 5. NATIVE SWIFT BRIDGE CALLBACKS =================
+  window.onServerDiscovered = function(server) {
+    if (typeof server === 'string') {
+      try { server = JSON.parse(server); } catch (e) {}
+    }
+    if (!server || !server.ip) return;
+
+    const host = `${server.ip}:${server.port || 58920}`;
+    const name = server.name || host.split(':')[0];
+
+    discoveredServers.set(host, {
+      host: host,
+      name: name,
+      online: true
+    });
+
+    renderDiscoveredServers();
+
+    // Auto-connect if currently disconnected
+    if (!isConnected) {
+      connectWebSocket(host);
+    }
+  };
+
+  window.onNativeVolumeChanged = function(percent) {
+    const val = Math.max(0, Math.min(100, Math.round(percent)));
+    updateVolumeUI(val, false);
+    sendCommand('set_volume', { value: val });
+  };
+
+  // ================= 6. CSS CLIP WAVEFORM SCRUBBER =================
   function initWaveformBars() {
     if (!waveformBarsBase || !waveformBarsActive) return;
     const count = 56;
@@ -392,7 +386,7 @@
     }
   }, 250);
 
-  // ================= 4. VOLUME SLIDER ENGINE =================
+  // ================= 7. VOLUME SLIDER ENGINE =================
   function updateVolumeUI(val, animate = true) {
     val = Math.max(0, Math.min(100, Math.round(val)));
     currentVolume = val;
@@ -460,24 +454,7 @@
     volumeTrack.addEventListener('pointercancel', finishVolume);
   }
 
-  // ================= 5. DESKTOP SELECTOR OVERLAY =================
-  window.showDesktopSelector = function() {
-    triggerHaptic('light');
-    if (desktopLaunchOverlay) desktopLaunchOverlay.classList.add('open');
-    probeSubnet();
-  };
-
-  window.hideDesktopSelector = function() {
-    if (desktopLaunchOverlay) desktopLaunchOverlay.classList.remove('open');
-  };
-
-  window.closeModalsOnBackdrop = function(e) {
-    if (e.target.classList.contains('deck-modal-backdrop')) {
-      e.target.classList.remove('open');
-    }
-  };
-
-  // ================= 6. WEBSOCKET NETWORK CORE =================
+  // ================= 8. WEBSOCKET NETWORK CORE =================
   function sendCommand(action, params = {}) {
     if (!ws || ws.readyState !== WebSocket.OPEN) {
       if (serverHost) connectWebSocket(serverHost);
@@ -510,11 +487,17 @@
 
     ws.onopen = function() {
       isConnected = true;
+      try {
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.nativeApp) {
+          window.webkit.messageHandlers.nativeApp.postMessage({ action: 'connectionState', state: 'connected' });
+        }
+      } catch (e) {}
+
       localStorage.setItem('mousely_last_host', host);
       if (statusDot) statusDot.classList.add('connected');
       if (statusDeviceName) statusDeviceName.textContent = host.split(':')[0];
       showToast('Connected to Windows Host', '🖥️');
-      hideDesktopSelector();
+      window.hideDesktopSelector();
       sendCommand('get_state');
     };
 
@@ -527,6 +510,12 @@
 
     ws.onclose = function() {
       isConnected = false;
+      try {
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.nativeApp) {
+          window.webkit.messageHandlers.nativeApp.postMessage({ action: 'connectionState', state: 'disconnected' });
+        }
+      } catch (e) {}
+
       if (statusDot) statusDot.classList.remove('connected');
       if (statusDeviceName) statusDeviceName.textContent = 'Disconnected';
       scheduleReconnect();
@@ -612,7 +601,7 @@
     }
   }
 
-  // ================= 7. AUTO-DISCOVERY & SUBNET PROBING =================
+  // ================= 9. AUTO-DISCOVERY & SUBNET PROBING =================
   function fetchWithTimeout(url, timeoutMs = 1200) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -623,7 +612,7 @@
     let savedHost = localStorage.getItem('mousely_last_host');
     if (savedHost) {
       testAndAddServer(savedHost);
-      connectWebSocket(savedHost);
+      if (!isConnected) connectWebSocket(savedHost);
     }
 
     if (window.location.hostname && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
@@ -671,7 +660,7 @@
     desktopDevicesList.innerHTML = '';
     discoveredServers.forEach(srv => {
       const card = document.createElement('div');
-      card.className = 'desktop-item-card fast-touch';
+      card.className = 'desktop-item-card';
       card.innerHTML = `
         <div style="display: flex; align-items: center; gap: 10px;">
           <span style="font-size: 18px;">🖥️</span>
@@ -683,23 +672,15 @@
         <span style="font-size: 11px; color: #ff2a55; font-weight: 600;">Connect →</span>
       `;
       card.onclick = () => {
+        triggerHaptic('light');
         connectWebSocket(srv.host);
       };
       desktopDevicesList.appendChild(card);
     });
   }
 
-  window.connectManual = function() {
-    if (!manualIpInput) return;
-    let ip = manualIpInput.value.trim();
-    if (!ip) return;
-    if (!ip.includes(':')) ip += ':58920';
-    connectWebSocket(ip);
-  };
-
-  // ================= 8. INITIALIZATION =================
+  // ================= 10. INITIALIZATION =================
   window.addEventListener('DOMContentLoaded', () => {
-    setupFastTouchDispatcher();
     setupSwipeNavigation();
     initWaveformBars();
     setupWaveformEvents();

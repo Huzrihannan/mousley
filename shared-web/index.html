@@ -33,14 +33,14 @@
     <!-- Top Liquid Glass Navigation Header -->
     <header class="top-glass-header">
       <!-- Left: Connection Status Pill -->
-      <button class="status-glass-pill fast-touch" id="statusPill" data-action="desktop-selector" title="Desktop Connection">
+      <button class="status-glass-pill" id="statusPill" onclick="showDesktopSelector()" title="Desktop Connection">
         <span class="status-glow-dot" id="statusDot"></span>
         <span class="status-name" id="statusDeviceName">Select Desktop</span>
       </button>
 
       <!-- Center: Liquid Glass Segmented Page Switcher -->
       <nav class="nav-segmented-glass" id="navTabs">
-        <button class="nav-glass-tab fast-touch active" data-page="0">
+        <button class="nav-glass-tab active" data-page="0" onclick="switchPage(0)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 18V5l12-2v13"></path>
             <circle cx="6" cy="18" r="3"></circle>
@@ -48,7 +48,7 @@
           </svg>
           <span>Media</span>
         </button>
-        <button class="nav-glass-tab fast-touch" data-page="1">
+        <button class="nav-glass-tab" data-page="1" onclick="switchPage(1)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="3" width="7" height="7"></rect>
             <rect x="14" y="3" width="7" height="7"></rect>
@@ -57,7 +57,7 @@
           </svg>
           <span>Apps (8)</span>
         </button>
-        <button class="nav-glass-tab fast-touch" data-page="2">
+        <button class="nav-glass-tab" data-page="2" onclick="switchPage(2)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
             <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
@@ -67,7 +67,7 @@
       </nav>
 
       <!-- Right: Settings / Discovered PCs Button -->
-      <button class="header-glass-icon-btn fast-touch" data-action="desktop-selector" title="Scan Devices">
+      <button class="header-glass-icon-btn" onclick="showDesktopSelector()" title="Scan Devices">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="4" y1="21" x2="4" y2="14"></line>
           <line x1="4" y1="10" x2="4" y2="3"></line>
@@ -122,7 +122,7 @@
                     <span>Lossless</span>
                   </div>
 
-                  <button class="media-favorite-btn fast-touch" id="btnHeart" data-action="favorite" title="Like Track">
+                  <button class="media-favorite-btn" id="btnHeart" onclick="toggleFavorite()" title="Like Track">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
                     </svg>
@@ -134,16 +134,13 @@
             <!-- Right Deck: Scrubber + Big Ruby Capsule Play/Pause + Volume Rail -->
             <div class="media-deck-right">
               
-              <!-- Fast Pure CSS Clip Waveform Audio Scrubber -->
+              <!-- Fast Waveform Audio Scrubber -->
               <div class="media-waveform-block">
                 <div class="waveform-scrubber-wrap" id="waveformBar">
-                  <!-- Base frosted white bars -->
                   <div class="waveform-bars-track" id="waveformBarsBase"></div>
-                  <!-- Active illuminated red bars with clip -->
                   <div class="waveform-progress-clip" id="waveformProgressClip">
                     <div class="waveform-bars-track active" id="waveformBarsActive"></div>
                   </div>
-                  <!-- Needle indicator -->
                   <div class="waveform-needle" id="waveformNeedle">
                     <div class="needle-bead"></div>
                   </div>
@@ -156,7 +153,7 @@
 
               <!-- Transport Controls Row -->
               <div class="media-controls-row">
-                <button class="btn-transport fast-touch" id="btnShuffle" data-action="shuffle" title="Shuffle">
+                <button class="btn-transport" id="btnShuffle" onclick="toggleShuffle()" title="Shuffle">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="16 3 21 3 21 8"></polyline>
                     <line x1="4" y1="20" x2="21" y2="3"></line>
@@ -166,7 +163,7 @@
                   </svg>
                 </button>
 
-                <button class="btn-transport fast-touch" id="btnPrev" data-action="prev" title="Previous Track">
+                <button class="btn-transport" id="btnPrev" onclick="skipPrev()" title="Previous Track">
                   <svg viewBox="0 0 24 24" fill="currentColor">
                     <polygon points="19 20 9 12 19 4 19 20"></polygon>
                     <rect x="5" y="4" width="2.5" height="16" rx="1"></rect>
@@ -174,7 +171,7 @@
                 </button>
 
                 <!-- Signature Large Ruby Liquid Glass Play/Pause Capsule -->
-                <button class="btn-play-capsule fast-touch" id="btnPlayPause" data-action="play_pause" title="Play / Pause">
+                <button class="btn-play-capsule" id="btnPlayPause" onclick="togglePlayPause()" title="Play / Pause">
                   <div class="capsule-specular"></div>
                   <svg id="playIcon" viewBox="0 0 24 24" fill="currentColor">
                     <polygon points="7 4 19 12 7 20 7 4"></polygon>
@@ -185,14 +182,14 @@
                   </svg>
                 </button>
 
-                <button class="btn-transport fast-touch" id="btnNext" data-action="next" title="Next Track">
+                <button class="btn-transport" id="btnNext" onclick="skipNext()" title="Next Track">
                   <svg viewBox="0 0 24 24" fill="currentColor">
                     <polygon points="5 4 15 12 5 20 5 4"></polygon>
                     <rect x="16.5" y="4" width="2.5" height="16" rx="1"></rect>
                   </svg>
                 </button>
 
-                <button class="btn-transport fast-touch" id="btnRepeat" data-action="repeat" title="Repeat">
+                <button class="btn-transport" id="btnRepeat" onclick="toggleRepeat()" title="Repeat">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="17 1 21 5 17 9"></polyline>
                     <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
@@ -204,7 +201,7 @@
 
               <!-- Volume Synchronization Bar with 3D Ruby Metallic Orb -->
               <div class="media-volume-strip">
-                <button class="vol-icon-btn fast-touch" id="btnMuteToggle" data-action="mute" title="Mute / Unmute">
+                <button class="vol-icon-btn" id="btnMuteToggle" onclick="toggleMute()" title="Mute / Unmute">
                   <svg id="volIcon" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
                   </svg>
@@ -233,7 +230,7 @@
           <div class="mission-grid-8">
             
             <!-- Block 1: Browser -->
-            <button class="liquid-pill-block fast-touch" data-action="app" data-slot="1" data-name="Browser">
+            <button class="liquid-pill-block" onclick="launchApp(1, 'Browser')">
               <div class="pill-left-content">
                 <svg class="pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                   <circle cx="12" cy="12" r="10"></circle>
@@ -249,7 +246,7 @@
             </button>
 
             <!-- Block 2: Spotify -->
-            <button class="liquid-pill-block fast-touch" data-action="app" data-slot="2" data-name="Spotify">
+            <button class="liquid-pill-block" onclick="launchApp(2, 'Spotify')">
               <div class="pill-left-content">
                 <svg class="pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                   <circle cx="12" cy="12" r="10"></circle>
@@ -266,7 +263,7 @@
             </button>
 
             <!-- Block 3: File Explorer -->
-            <button class="liquid-pill-block fast-touch" data-action="app" data-slot="3" data-name="Explorer">
+            <button class="liquid-pill-block" onclick="launchApp(3, 'Explorer')">
               <div class="pill-left-content">
                 <svg class="pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                   <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
@@ -280,7 +277,7 @@
             </button>
 
             <!-- Block 4: Task Manager -->
-            <button class="liquid-pill-block fast-touch" data-action="app" data-slot="4" data-name="Task Manager">
+            <button class="liquid-pill-block" onclick="launchApp(4, 'Task Manager')">
               <div class="pill-left-content">
                 <svg class="pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                   <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
@@ -294,7 +291,7 @@
             </button>
 
             <!-- Block 5: Terminal -->
-            <button class="liquid-pill-block fast-touch" data-action="app" data-slot="5" data-name="Terminal">
+            <button class="liquid-pill-block" onclick="launchApp(5, 'Terminal')">
               <div class="pill-left-content">
                 <svg class="pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                   <polyline points="4 17 10 11 4 5"></polyline>
@@ -309,7 +306,7 @@
             </button>
 
             <!-- Block 6: Calculator -->
-            <button class="liquid-pill-block fast-touch" data-action="app" data-slot="6" data-name="Calculator">
+            <button class="liquid-pill-block" onclick="launchApp(6, 'Calculator')">
               <div class="pill-left-content">
                 <svg class="pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                   <rect x="4" y="2" width="16" height="20" rx="2"></rect>
@@ -330,7 +327,7 @@
             </button>
 
             <!-- Block 7: Notepad -->
-            <button class="liquid-pill-block fast-touch" data-action="app" data-slot="7" data-name="Notepad">
+            <button class="liquid-pill-block" onclick="launchApp(7, 'Notepad')">
               <div class="pill-left-content">
                 <svg class="pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -346,7 +343,7 @@
             </button>
 
             <!-- Block 8: Windows Settings -->
-            <button class="liquid-pill-block fast-touch" data-action="app" data-slot="8" data-name="Settings">
+            <button class="liquid-pill-block" onclick="launchApp(8, 'Settings')">
               <div class="pill-left-content">
                 <svg class="pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                   <circle cx="12" cy="12" r="3"></circle>
@@ -370,7 +367,7 @@
           <div class="actions-grid-4">
             
             <!-- Action 1: Ctrl + C (Copy) -->
-            <button class="liquid-action-card fast-touch" data-action="clip" data-clip="copy">
+            <button class="liquid-action-card" onclick="triggerPillAction('copy')">
               <div class="card-icon-halo">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                   <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -385,7 +382,7 @@
             </button>
 
             <!-- Action 2: Ctrl + V (Paste) -->
-            <button class="liquid-action-card fast-touch" data-action="clip" data-clip="paste">
+            <button class="liquid-action-card" onclick="triggerPillAction('paste')">
               <div class="card-icon-halo">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
@@ -400,7 +397,7 @@
             </button>
 
             <!-- Action 3: Win + V (Clipboard History) -->
-            <button class="liquid-action-card fast-touch" data-action="clip" data-clip="history">
+            <button class="liquid-action-card" onclick="triggerPillAction('history')">
               <div class="card-icon-halo">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.551H10.949M0 12.6h9.75V22.05L0 20.7m10.949-8.1H24V24l-13.051-1.802"/>
@@ -414,7 +411,7 @@
             </button>
 
             <!-- Action 4: Win + Shift + S (Screenshot) -->
-            <button class="liquid-action-card fast-touch" data-action="clip" data-clip="screenshot">
+            <button class="liquid-action-card" onclick="triggerPillAction('screenshot')">
               <div class="card-icon-halo">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
@@ -437,23 +434,23 @@
     <!-- Minimal Liquid Glass Pagination Dots -->
     <footer class="bottom-page-indicator">
       <div class="carousel-dots-pill" id="carouselDots">
-        <span class="carousel-dot active" data-page="0"></span>
-        <span class="carousel-dot" data-page="1"></span>
-        <span class="carousel-dot" data-page="2"></span>
+        <span class="carousel-dot active" onclick="switchPage(0)"></span>
+        <span class="carousel-dot" onclick="switchPage(1)"></span>
+        <span class="carousel-dot" onclick="switchPage(2)"></span>
       </div>
     </footer>
 
   </div>
 
   <!-- ================= DESKTOP SELECTOR OVERLAY ================= -->
-  <div class="deck-modal-backdrop" id="desktopLaunchOverlay" onclick="closeModalsOnBackdrop(event)">
-    <div class="desktop-launch-card">
+  <div class="desktop-launch-overlay hidden" id="desktopLaunchOverlay" onclick="closeDesktopSelector(event)">
+    <div class="desktop-launch-card" onclick="event.stopPropagation()">
       <div class="launch-header">
         <div class="launch-title-wrap">
           <span class="launch-title">🖥️ Select Windows Host</span>
           <div class="radar-spinner"></div>
         </div>
-        <button class="modal-close-btn fast-touch" data-action="close-modals">✕</button>
+        <button class="modal-close-btn" onclick="hideDesktopSelector()">✕</button>
       </div>
 
       <div class="desktop-devices-list" id="desktopDevicesList">
@@ -464,7 +461,7 @@
 
       <div class="launch-manual-row">
         <input type="text" class="launch-manual-input" id="manualIpInput" placeholder="Enter IP:58920 (e.g. 192.168.1.100:58920)">
-        <button class="btn-manual-connect fast-touch" data-action="manual-connect">Connect</button>
+        <button class="btn-manual-connect" onclick="connectManual()">Connect</button>
       </div>
     </div>
   </div>
