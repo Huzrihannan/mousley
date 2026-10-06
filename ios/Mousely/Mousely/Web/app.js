@@ -108,14 +108,25 @@
     triggerHaptic('light');
   };
 
-  // --- Two-Finger Swipe Gesture ---
+  // --- Swipe Navigation (Both 1-Finger and 2-Finger Support) ---
+  let singleTouchStartX = 0;
+  let singleTouchStartY = 0;
+  let isSingleSwipe = false;
+
   document.addEventListener('touchstart', (e) => {
-    if (e.touches.length === 2) {
+    if (e.touches.length === 1) {
+      singleTouchStartX = e.touches[0].clientX;
+      singleTouchStartY = e.touches[0].clientY;
+      isSingleSwipe = true;
+      isTwoFingerGesture = false;
+    } else if (e.touches.length === 2) {
       isTwoFingerGesture = true;
+      isSingleSwipe = false;
       twoFingerStartX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
       twoFingerLastX = twoFingerStartX;
     } else {
       isTwoFingerGesture = false;
+      isSingleSwipe = false;
     }
   }, { passive: true });
 
@@ -134,18 +145,37 @@
         if (currentPage > 0) window.switchPage(currentPage - 1);
       }
       isTwoFingerGesture = false;
+    } else if (isSingleSwipe && e.changedTouches && e.changedTouches.length === 1) {
+      const deltaX = e.changedTouches[0].clientX - singleTouchStartX;
+      const deltaY = e.changedTouches[0].clientY - singleTouchStartY;
+      if (Math.abs(deltaX) > 55 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+        if (!isDraggingVolume && !isScrubbingTimeline) {
+          if (deltaX < 0 && currentPage < 2) {
+            window.switchPage(currentPage + 1);
+          } else if (deltaX > 0 && currentPage > 0) {
+            window.switchPage(currentPage - 1);
+          }
+        }
+      }
+      isSingleSwipe = false;
     }
   }, { passive: true });
 
   // --- Desktop Selection & Discovery ---
   window.showDesktopSelector = function() {
     triggerHaptic('light');
-    desktopLaunchOverlay.classList.remove('hidden');
+    desktopLaunchOverlay.style.display = 'flex';
+    desktopLaunchOverlay.style.pointerEvents = 'auto';
+    requestAnimationFrame(() => {
+      desktopLaunchOverlay.classList.remove('hidden');
+    });
     renderDiscoveredList();
   };
 
   window.hideDesktopSelector = function() {
     desktopLaunchOverlay.classList.add('hidden');
+    desktopLaunchOverlay.style.pointerEvents = 'none';
+    desktopLaunchOverlay.style.display = 'none';
   };
 
   window.onServerDiscovered = function(serverInfo) {
@@ -488,14 +518,14 @@
 
   function handleVolumeTouch(e) {
     const rect = volumeTrack.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const ratio = (clientX - rect.left) / rect.width;
+    const clientX = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
     sendVolumeUpdate(Math.round(ratio * 100));
   }
 
   volumeTrack.addEventListener('pointerdown', (e) => {
     isDraggingVolume = true;
-    volumeTrack.setPointerCapture(e.pointerId);
+    try { volumeTrack.setPointerCapture(e.pointerId); } catch (err) {}
     handleVolumeTouch(e);
   });
 
@@ -512,6 +542,18 @@
 
   volumeTrack.addEventListener('pointerup', finishVolumeDrag);
   volumeTrack.addEventListener('pointercancel', finishVolumeDrag);
+
+  volumeTrack.addEventListener('touchstart', (e) => {
+    isDraggingVolume = true;
+    handleVolumeTouch(e);
+  }, { passive: true });
+
+  volumeTrack.addEventListener('touchmove', (e) => {
+    if (isDraggingVolume) handleVolumeTouch(e);
+  }, { passive: true });
+
+  volumeTrack.addEventListener('touchend', finishVolumeDrag, { passive: true });
+  volumeTrack.addEventListener('touchcancel', finishVolumeDrag, { passive: true });
 
   window.setVolumePreset = function(val) {
     commitVolume(val);
@@ -531,6 +573,8 @@
   };
 
   // --- Media UI & Controls (Instant 0ms Feedback) ---
+  let lastTrackKey = '';
+
   function updateMediaUI(media) {
     if (!media) return;
 
@@ -543,10 +587,16 @@
     playIcon.style.display = isPlaying ? 'none' : 'block';
     pauseIcon.style.display = isPlaying ? 'block' : 'none';
 
-    if (media.artwork) {
-      albumArtImg.src = media.artwork;
-    } else if (media.hasArtwork && serverHost) {
-      albumArtImg.src = `http://${serverHost}/api/artwork?t=${Date.now()}`;
+    const currentKey = `${media.title || ''}|${media.artist || ''}|${media.hasArtwork}|${media.artwork || ''}`;
+    if (currentKey !== lastTrackKey) {
+      lastTrackKey = currentKey;
+      if (media.artwork) {
+        albumArtImg.src = media.artwork;
+      } else if (media.hasArtwork && serverHost) {
+        albumArtImg.src = `http://${serverHost}/api/artwork?t=${Date.now()}`;
+      } else {
+        albumArtImg.src = 'assets/default-art.svg';
+      }
     }
 
     if (media.duration !== undefined) duration = media.duration;
@@ -580,7 +630,7 @@
   function handleTimelineScrub(e) {
     if (duration <= 0) return;
     const rect = timelineBar.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientX = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
     const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
     currentPosition = Math.round(ratio * duration);
     timeElapsed.textContent = formatTime(currentPosition);
@@ -590,7 +640,7 @@
   timelineBar.addEventListener('pointerdown', (e) => {
     if (duration <= 0) return;
     isScrubbingTimeline = true;
-    timelineBar.setPointerCapture(e.pointerId);
+    try { timelineBar.setPointerCapture(e.pointerId); } catch (err) {}
     handleTimelineScrub(e);
   });
 
@@ -610,8 +660,37 @@
   timelineBar.addEventListener('pointerup', finishTimelineScrub);
   timelineBar.addEventListener('pointercancel', finishTimelineScrub);
 
-  // Instant Play / Pause / Skip
-  btnPlayPause.addEventListener('pointerdown', () => {
+  timelineBar.addEventListener('touchstart', (e) => {
+    if (duration <= 0) return;
+    isScrubbingTimeline = true;
+    handleTimelineScrub(e);
+  }, { passive: true });
+
+  timelineBar.addEventListener('touchmove', (e) => {
+    if (isScrubbingTimeline) handleTimelineScrub(e);
+  }, { passive: true });
+
+  timelineBar.addEventListener('touchend', finishTimelineScrub, { passive: true });
+  timelineBar.addEventListener('touchcancel', finishTimelineScrub, { passive: true });
+
+  // Instant Play / Pause / Skip with Touch & Click Reliability
+  const bindInstantTap = (element, callback) => {
+    if (!element) return;
+    let touchHandled = false;
+    element.addEventListener('touchstart', (e) => {
+      touchHandled = true;
+      callback(e);
+    }, { passive: true });
+    element.addEventListener('click', (e) => {
+      if (touchHandled) {
+        touchHandled = false;
+        return;
+      }
+      callback(e);
+    });
+  };
+
+  bindInstantTap(btnPlayPause, () => {
     triggerHaptic('medium');
     isPlaying = !isPlaying;
     playIcon.style.display = isPlaying ? 'none' : 'block';
@@ -619,12 +698,12 @@
     sendCommand('play_pause');
   });
 
-  btnPrev.addEventListener('pointerdown', () => {
+  bindInstantTap(btnPrev, () => {
     triggerHaptic('light');
     sendCommand('prev');
   });
 
-  btnNext.addEventListener('pointerdown', () => {
+  bindInstantTap(btnNext, () => {
     triggerHaptic('light');
     sendCommand('next');
   });
