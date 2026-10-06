@@ -8,7 +8,15 @@ class ViewController: UIViewController, WKScriptMessageHandler, WKNavigationDele
     private let volumeObserver = VolumeObserver()
     private let networkDiscovery = NetworkDiscovery()
     private let motionManager = CMMotionManager()
+    private let motionQueue: OperationQueue = {
+        let q = OperationQueue()
+        q.name = "com.mousely.motionQueue"
+        q.qualityOfService = .userInteractive
+        return q
+    }()
     private var isMotionTrackingActive = false
+    private var lastEvalTime: TimeInterval = 0
+    private var lastNativeRollDeg: Double = 0.0
 
     override var preferredStatusBarStyle: UIStatusBarStyle {
         return .lightContent
@@ -178,18 +186,30 @@ class ViewController: UIViewController, WKScriptMessageHandler, WKNavigationDele
     private func startHardwareMotionUpdates() {
         guard motionManager.isDeviceMotionAvailable, !isMotionTrackingActive else { return }
         isMotionTrackingActive = true
-        motionManager.deviceMotionUpdateInterval = 1.0 / 60.0 // 60Hz
-        motionManager.startDeviceMotionUpdates(to: .main) { [weak self] motion, _ in
+        lastEvalTime = 0
+        lastNativeRollDeg = 0.0
+        motionManager.deviceMotionUpdateInterval = 1.0 / 30.0 // 30Hz sensor polling
+        motionManager.startDeviceMotionUpdates(to: motionQueue) { [weak self] motion, _ in
             guard let self = self, let motion = motion else { return }
             // In Landscape Right: turning the steering wheel rotates around the device pitch axis
             let rollDeg = -motion.attitude.pitch * (180.0 / .pi)
-            self.webView.evaluateJavaScript("if (window.onNativeGyroUpdate) window.onNativeGyroUpdate(\(rollDeg));", completionHandler: nil)
+
+            let now = CACurrentMediaTime()
+            // Throttle evaluateJavaScript to max 20Hz (50ms) and require at least 0.25 deg movement
+            if (now - self.lastEvalTime >= 0.05) && (abs(rollDeg - self.lastNativeRollDeg) >= 0.25 || abs(rollDeg) < 0.2) {
+                self.lastEvalTime = now
+                self.lastNativeRollDeg = rollDeg
+                DispatchQueue.main.async {
+                    self.webView.evaluateJavaScript("if (window.onNativeGyroUpdate) window.onNativeGyroUpdate(\(rollDeg));", completionHandler: nil)
+                }
+            }
         }
     }
 
     private func stopHardwareMotionUpdates() {
         if isMotionTrackingActive {
             motionManager.stopDeviceMotionUpdates()
+            motionQueue.cancelAllOperations()
             isMotionTrackingActive = false
         }
     }

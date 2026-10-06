@@ -1054,7 +1054,7 @@
 
   // ================= 12. GAME CONTROLLER & GYRO STEERING ENGINE =================
   let masterMode = 'remote'; // 'remote' | 'game'
-  let controllerSubMode = 'gamepad'; // 'gamepad' | 'gyro'
+  let controllerSubMode = 'gyro'; // 'gyro' (Racing Cockpit) | 'gamepad' (Dual-Stick Pad)
 
   let gamepadButtonMask = 0;
   let gamepadStickX = 0;
@@ -1065,6 +1065,7 @@
   let rawGyroRoll = 0;
   let calibratedRollOffset = 0;
   let currentSteeringAngle = 0;
+  let lastSentSteeringDeg = 0;
   let isDeviceOrientationListening = false;
   const GYRO_MAX_DEG = 35.0;
   const GYRO_DEADZONE_DEG = 1.8;
@@ -1073,8 +1074,9 @@
   const binaryGamepadView = new DataView(binaryGamepadBuffer);
   binaryGamepadView.setUint8(0, 0x10); // Packet 0x10 = Gamepad Frame
 
-  let gamepadStreamRaf = null;
-  let lastGamepadDispatch = 0;
+  let gamepadHeartbeatTimer = null;
+  let lastGamepadDispatchTime = 0;
+  let lastStickDispatchTime = 0;
 
   const BUTTON_BIT_MAP = {
     'A': 0,
@@ -1101,10 +1103,11 @@
   const subTabGyro = document.getElementById('subTabGyro');
   const carouselViewport = document.getElementById('carouselViewport');
   const gameControllerViewport = document.getElementById('gameControllerViewport');
-  const gyroNeedle = document.getElementById('gyroNeedle');
+  const cockpitGyroRacing = document.getElementById('cockpitGyroRacing');
+  const cockpitGamepad = document.getElementById('cockpitGamepad');
+  const gyroHorizonBar = document.getElementById('gyroHorizonBar');
   const gyroDegreeNum = document.getElementById('gyroDegreeNum');
   const gyroDirectionTag = document.getElementById('gyroDirectionTag');
-  const gyroModeText = document.getElementById('gyroModeText');
   const thumbstickZone = document.getElementById('thumbstickZone');
   const thumbstickBase = document.getElementById('thumbstickBase');
   const thumbstickKnob = document.getElementById('thumbstickKnob');
@@ -1135,6 +1138,7 @@
         gameControllerViewport.style.display = 'flex';
       }
 
+      setControllerSubMode(controllerSubMode || 'gyro');
       requestOrientationPermission();
       try {
         if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.nativeApp) {
@@ -1144,7 +1148,7 @@
 
       recalibrateGyro();
       startGamepadLoop();
-      showToast('Cyberpunk Controller Active', '🎮');
+      showToast('Cyber Racing Cockpit Active', '🏎️');
     } else {
       if (masterModePill) masterModePill.classList.remove('theme-green');
       if (pillModeRemote) pillModeRemote.classList.add('active');
@@ -1164,7 +1168,7 @@
       }
       if (carouselViewport) {
         carouselViewport.classList.remove('hidden');
-        carouselViewport.style.display = 'flex';
+        carouselViewport.style.display = '';
       }
 
       try {
@@ -1174,6 +1178,7 @@
       } catch (e) {}
 
       stopGamepadLoop();
+      switchPage(currentPage);
       showToast('Remote Deck Active', '✨');
     }
     triggerHaptic('medium');
@@ -1183,22 +1188,44 @@
     controllerSubMode = subMode;
     if (subTabGamepad) subTabGamepad.classList.toggle('active', subMode === 'gamepad');
     if (subTabGyro) subTabGyro.classList.toggle('active', subMode === 'gyro');
-    if (gyroModeText) {
-      gyroModeText.textContent = subMode === 'gyro' ? 'GYRO STEERING ACTIVE' : 'GAMEPAD STICK ACTIVE';
+
+    if (subMode === 'gyro') {
+      if (cockpitGyroRacing) {
+        cockpitGyroRacing.classList.remove('hidden');
+        cockpitGyroRacing.style.display = 'flex';
+      }
+      if (cockpitGamepad) {
+        cockpitGamepad.classList.add('hidden');
+        cockpitGamepad.style.display = 'none';
+      }
+    } else {
+      if (cockpitGyroRacing) {
+        cockpitGyroRacing.classList.add('hidden');
+        cockpitGyroRacing.style.display = 'none';
+      }
+      if (cockpitGamepad) {
+        cockpitGamepad.classList.remove('hidden');
+        cockpitGamepad.style.display = 'flex';
+      }
     }
+
     triggerHaptic('light');
+    dispatchGamepadState();
   };
 
   window.recalibrateGyro = function() {
     calibratedRollOffset = rawGyroRoll;
+    currentSteeringAngle = 0;
+    lastSentSteeringDeg = 0;
     if (gyroDegreeNum) gyroDegreeNum.textContent = '0°';
-    if (gyroDirectionTag) gyroDirectionTag.textContent = 'CENTER';
-    if (gyroNeedle) gyroNeedle.style.transform = 'rotate(0deg)';
+    if (gyroDirectionTag) gyroDirectionTag.textContent = 'CENTER LOCK';
+    if (gyroHorizonBar) gyroHorizonBar.style.transform = 'translate3d(0, 0, 0)';
     triggerHaptic('medium');
-    showToast('Gyro Zero-Point Calibrated', '🏎️');
+    showToast('Gyro Zero-Point Calibrated', '🎯');
+    dispatchGamepadState();
   };
 
-  // Native Swift CoreMotion direct input hook (hardware 60Hz precision)
+  // Native Swift CoreMotion direct input hook (hardware sensor precision)
   window.onNativeGyroUpdate = function(rollDegrees) {
     if (masterMode !== 'game') return;
     updateGyroSteeringAngle(rollDegrees);
@@ -1259,11 +1286,13 @@
     }
 
     const clampedDeg = Math.max(-GYRO_MAX_DEG, Math.min(GYRO_MAX_DEG, effective));
+    const angleDelta = Math.abs(clampedDeg - currentSteeringAngle);
     currentSteeringAngle = clampedDeg;
 
-    const visualNeedleDeg = (clampedDeg / GYRO_MAX_DEG) * 45;
-    if (gyroNeedle) {
-      gyroNeedle.style.transform = `rotate(${visualNeedleDeg.toFixed(1)}deg)`;
+    // Fast GPU Horizon Bar update (140px track width: -58px to +58px)
+    if (gyroHorizonBar) {
+      const barOffset = Math.max(-58, Math.min(58, (clampedDeg / GYRO_MAX_DEG) * 58));
+      gyroHorizonBar.style.transform = `translate3d(${barOffset.toFixed(1)}px, 0, 0)`;
     }
 
     if (gyroDegreeNum) {
@@ -1273,39 +1302,46 @@
 
     if (gyroDirectionTag) {
       if (Math.abs(clampedDeg) < 1.5) {
-        gyroDirectionTag.textContent = 'CENTER';
+        gyroDirectionTag.textContent = 'CENTER LOCK';
       } else if (clampedDeg < 0) {
         gyroDirectionTag.textContent = 'STEER LEFT';
       } else {
         gyroDirectionTag.textContent = 'STEER RIGHT';
       }
     }
+
+    // Only dispatch to native/PC if angle actually changed by >= 0.25 deg
+    if (angleDelta >= 0.25 || (clampedDeg === 0 && angleDelta > 0)) {
+      lastSentSteeringDeg = clampedDeg;
+      dispatchGamepadState();
+    }
   }
 
   function startGamepadLoop() {
-    if (gamepadStreamRaf) return;
-    function loop(now) {
+    stopGamepadLoop();
+    gamepadHeartbeatTimer = setInterval(() => {
       if (masterMode !== 'game') {
-        gamepadStreamRaf = null;
+        stopGamepadLoop();
         return;
       }
-
-      if (now - lastGamepadDispatch >= 15) { // ~60fps
-        lastGamepadDispatch = now;
+      const now = performance.now();
+      // Keep alive every 75ms (13Hz) so PC 250ms watchdog never drops active keys
+      if (now - lastGamepadDispatchTime >= 75) {
         dispatchGamepadState();
       }
-
-      gamepadStreamRaf = requestAnimationFrame(loop);
-    }
-    gamepadStreamRaf = requestAnimationFrame(loop);
+    }, 75);
   }
 
   function stopGamepadLoop() {
-    if (gamepadStreamRaf) {
-      cancelAnimationFrame(gamepadStreamRaf);
-      gamepadStreamRaf = null;
+    if (gamepadHeartbeatTimer) {
+      clearInterval(gamepadHeartbeatTimer);
+      gamepadHeartbeatTimer = null;
     }
+    // Dispatch neutral frames to guarantee zero stuck keys on PC
     dispatchGamepadFrame(0, 0, 0, 0, 0);
+    setTimeout(() => {
+      dispatchGamepadFrame(0, 0, 0, 0, 0);
+    }, 30);
   }
 
   function dispatchGamepadState() {
@@ -1324,6 +1360,7 @@
   }
 
   function dispatchGamepadFrame(stickX, stickY, lt, rt, buttons) {
+    lastGamepadDispatchTime = performance.now();
     try {
       if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.nativeApp) {
         window.webkit.messageHandlers.nativeApp.postMessage({
@@ -1485,6 +1522,12 @@
 
         gamepadStickX = Math.round((clampedX / MAX_STICK_RADIUS) * 32767);
         gamepadStickY = Math.round((-clampedY / MAX_STICK_RADIUS) * 32767);
+
+        const now = performance.now();
+        if (now - lastStickDispatchTime >= 25) { // 40Hz max for thumbstick move
+          lastStickDispatchTime = now;
+          dispatchGamepadState();
+        }
       }
 
       function resetStick() {
@@ -1506,6 +1549,7 @@
         zoneCenterY = center.y;
         thumbstickKnob.classList.add('dragging');
         updateStickFromCoord(touch.clientX, touch.clientY);
+        dispatchGamepadState();
         triggerHaptic('light');
       }, { passive: false });
 
@@ -1549,6 +1593,7 @@
         zoneCenterY = center.y;
         thumbstickKnob.classList.add('dragging');
         updateStickFromCoord(e.clientX, e.clientY);
+        dispatchGamepadState();
       });
 
       window.addEventListener('mousemove', (e) => {

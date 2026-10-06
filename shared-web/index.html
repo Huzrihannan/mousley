@@ -81,7 +81,7 @@
 
         <!-- Controller Sub-Mode Tabs (Gamepad ↔ Gyro Steering) -->
         <div class="header-tabs-group hidden" id="gameTabsGroup">
-          <button class="nav-glass-tab active controller-sub-tab" id="subTabGamepad" onclick="setControllerSubMode('gamepad')">
+          <button class="nav-glass-tab controller-sub-tab" id="subTabGamepad" onclick="setControllerSubMode('gamepad')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
               <rect x="2" y="6" width="20" height="12" rx="4"></rect>
               <line x1="6" y1="12" x2="10" y2="12"></line>
@@ -91,7 +91,7 @@
             </svg>
             <span>Gamepad</span>
           </button>
-          <button class="nav-glass-tab controller-sub-tab" id="subTabGyro" onclick="setControllerSubMode('gyro')">
+          <button class="nav-glass-tab active controller-sub-tab" id="subTabGyro" onclick="setControllerSubMode('gyro')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
               <circle cx="12" cy="12" r="9"></circle>
               <path d="M12 3v18"></path>
@@ -514,51 +514,85 @@
       <div class="cyber-controller-card" id="cyberControllerCard">
         <div class="controller-glass-specular"></div>
 
-        <!-- Top Shoulder & Trigger Bar (LT / LB and RB / RT + Meta Buttons) -->
-        <div class="controller-trigger-bar">
-          <div class="trigger-cluster left-triggers">
-            <button class="cyber-trigger-btn btn-l2" id="btnTriggerL2" data-gamepad="LT">
-              <span class="trigger-label">LT</span>
-              <span class="trigger-sub">Brake</span>
+        <!-- ================= PANE 1: GYRO RACING COCKPIT ================= -->
+        <div class="cockpit-pane cockpit-racing" id="cockpitGyroRacing">
+          
+          <!-- LEFT THUMB: BRAKE WING -->
+          <div class="racing-wing racing-left-wing">
+            <button class="racing-sub-btn btn-handbrake" id="btnHandbrake" data-gamepad="A" title="Handbrake (Space)">
+              <span class="btn-sub-tag">SPACE</span>
+              <span class="btn-sub-title">HANDBRAKE</span>
             </button>
-            <button class="cyber-bumper-btn btn-l1" id="btnTriggerL1" data-gamepad="LB">
-              <span class="trigger-label">LB</span>
+            <button class="racing-pedal-btn pedal-brake" id="btnPedalBrake" data-gamepad="LT" title="Foot Brake / Reverse (S)">
+              <div class="pedal-ribs"></div>
+              <span class="pedal-code">LT</span>
+              <span class="pedal-title">BRAKE</span>
+              <span class="pedal-sub">REVERSE</span>
             </button>
-          </div>
-
-          <!-- Center Meta Buttons (Select / Center Gyro / Start) -->
-          <div class="controller-center-meta">
-            <button class="cyber-meta-btn" id="btnGameSelect" data-gamepad="SELECT" title="Select / Back">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="6" x2="20" y2="6"></line></svg>
-              <span>SELECT</span>
-            </button>
-            <button class="cyber-calibrate-btn" id="btnGyroCalibrate" onclick="recalibrateGyro()" title="Re-Center Steering Angle">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-              <span>CENTER GYRO</span>
-            </button>
-            <button class="cyber-meta-btn" id="btnGameStart" data-gamepad="START" title="Start / Menu">
-              <span>START</span>
-              <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            <button class="racing-sub-btn btn-gear-down" id="btnGearDown" data-gamepad="LB" title="Gear Down (Q)">
+              <span>◀ GEAR DOWN (Q)</span>
             </button>
           </div>
 
-          <div class="trigger-cluster right-triggers">
-            <button class="cyber-bumper-btn btn-r1" id="btnTriggerR1" data-gamepad="RB">
-              <span class="trigger-label">RB</span>
+          <!-- CENTER RACING HUD -->
+          <div class="racing-center-hud">
+            <!-- 1-Tap Re-Center Button -->
+            <button class="racing-recenter-btn" id="btnGyroCalibrate" onclick="recalibrateGyro()" title="Re-Center Steering Angle to 0°">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+              <span>🎯 RE-CENTER (0°)</span>
             </button>
-            <button class="cyber-trigger-btn btn-r2" id="btnTriggerR2" data-gamepad="RT">
-              <span class="trigger-label">RT</span>
-              <span class="trigger-sub">Gas</span>
+
+            <!-- Digital Horizon & Angle Meter -->
+            <div class="racing-horizon-box">
+              <div class="racing-horizon-track">
+                <div class="horizon-center-notch"></div>
+                <div class="horizon-needle-bar" id="gyroHorizonBar"></div>
+              </div>
+              <div class="racing-angle-readout">
+                <span class="racing-deg-number" id="gyroDegreeNum">0°</span>
+                <span class="racing-deg-label" id="gyroDirectionTag">CENTER LOCK</span>
+              </div>
+            </div>
+
+            <!-- Quick Meta Controls -->
+            <div class="racing-meta-row">
+              <button class="racing-meta-btn" data-gamepad="START" title="Pause / Menu (Enter / Esc)">
+                <span>ESC / MENU</span>
+              </button>
+              <button class="racing-meta-btn" data-gamepad="Y" title="Change Camera View (C)">
+                <span>CAMERA (C)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- RIGHT THUMB: THROTTLE (GAS) WING -->
+          <div class="racing-wing racing-right-wing">
+            <button class="racing-sub-btn btn-nitro" id="btnNitro" data-gamepad="X" title="Nitro / Boost (Shift)">
+              <span class="btn-sub-tag">SHIFT</span>
+              <span class="btn-sub-title">⚡ NITRO</span>
+            </button>
+            <button class="racing-pedal-btn pedal-gas" id="btnPedalGas" data-gamepad="RT" title="Throttle / Gas (W)">
+              <div class="pedal-ribs"></div>
+              <span class="pedal-code">RT</span>
+              <span class="pedal-title">GAS</span>
+              <span class="pedal-sub">THROTTLE</span>
+            </button>
+            <button class="racing-sub-btn btn-gear-up" id="btnGearUp" data-gamepad="RB" title="Gear Up (E)">
+              <span>GEAR UP (E) ▶</span>
             </button>
           </div>
+
         </div>
 
-        <!-- Cockpit Controls Zone (Left Cluster / Center Gyro HUD / Right Cluster) -->
-        <div class="controller-cockpit-zone">
+        <!-- ================= PANE 2: VIRTUAL GAMEPAD ================= -->
+        <div class="cockpit-pane cockpit-gamepad hidden" id="cockpitGamepad">
           
-          <!-- LEFT CLUSTER: Precision Analog Thumbstick & D-Pad -->
-          <div class="cockpit-left-cluster">
-            <!-- Analog Thumbstick -->
+          <!-- LEFT CLUSTER: Thumbstick & D-Pad -->
+          <div class="gamepad-side-cluster gamepad-left">
+            <div class="gamepad-triggers-row">
+              <button class="cyber-bumper-btn" data-gamepad="LB">LB</button>
+              <button class="cyber-trigger-btn" data-gamepad="LT">LT</button>
+            </div>
             <div class="cyber-thumbstick-zone" id="thumbstickZone">
               <div class="thumbstick-base" id="thumbstickBase">
                 <div class="thumbstick-crosshair"></div>
@@ -567,69 +601,35 @@
                 </div>
               </div>
             </div>
-
-            <!-- Tactile D-Pad -->
             <div class="cyber-dpad" id="cyberDpad">
-              <button class="dpad-btn dpad-up" id="dpadUp" data-gamepad="DPAD_UP">▲</button>
-              <button class="dpad-btn dpad-left" id="dpadLeft" data-gamepad="DPAD_LEFT">◀</button>
+              <button class="dpad-btn dpad-up" data-gamepad="DPAD_UP">▲</button>
+              <button class="dpad-btn dpad-left" data-gamepad="DPAD_LEFT">◀</button>
               <div class="dpad-center"></div>
-              <button class="dpad-btn dpad-right" id="dpadRight" data-gamepad="DPAD_RIGHT">▶</button>
-              <button class="dpad-btn dpad-down" id="dpadDown" data-gamepad="DPAD_DOWN">▼</button>
+              <button class="dpad-btn dpad-right" data-gamepad="DPAD_RIGHT">▶</button>
+              <button class="dpad-btn dpad-down" data-gamepad="DPAD_DOWN">▼</button>
             </div>
           </div>
 
-          <!-- CENTER CLUSTER: Dynamic Gyro Steering Arch & Horizon Gauge -->
-          <div class="cockpit-center-cluster" id="cockpitCenterCluster">
-            <div class="gyro-hud-card" id="gyroHudCard">
-              <div class="gyro-arch-container">
-                <svg class="gyro-arch-svg" viewBox="0 0 240 130">
-                  <!-- Outer Track Arc -->
-                  <path class="arc-track" d="M 25 115 A 95 95 0 0 1 215 115" fill="none" stroke="rgba(0,255,136,0.18)" stroke-width="12" stroke-linecap="round"></path>
-                  <!-- Active Steering Glow Fill -->
-                  <path class="arc-fill" id="gyroArcFill" d="M 120 20 A 95 95 0 0 1 120 20" fill="none" stroke="#00ff88" stroke-width="12" stroke-linecap="round"></path>
-                  <!-- Center Reference Marker -->
-                  <line x1="120" y1="10" x2="120" y2="28" stroke="#ffffff" stroke-width="3"></line>
-                  <!-- Angle Graduation Ticks -->
-                  <line x1="60" y1="52" x2="68" y2="60" stroke="rgba(255,255,255,0.4)" stroke-width="2"></line>
-                  <line x1="180" y1="52" x2="172" y2="60" stroke="rgba(255,255,255,0.4)" stroke-width="2"></line>
-                  <!-- Dynamic Steering Needle -->
-                  <line class="arc-needle" id="gyroNeedle" x1="120" y1="115" x2="120" y2="30" stroke="#00ff88" stroke-width="3.5" stroke-linecap="round"></line>
-                  <circle cx="120" cy="115" r="10" fill="#03150b" stroke="#00ff88" stroke-width="2.5"></circle>
-                </svg>
-              </div>
-
-              <!-- Degree & Direction Live Display -->
-              <div class="gyro-readout-wrap">
-                <div class="gyro-degree-box">
-                  <span class="gyro-deg-num" id="gyroDegreeNum">0°</span>
-                  <span class="gyro-deg-status" id="gyroDirectionTag">CENTER</span>
-                </div>
-                <div class="gyro-mode-indicator" id="gyroActivePill">
-                  <span class="gyro-live-dot"></span>
-                  <span id="gyroModeText">GYRO STEERING ACTIVE</span>
-                </div>
-              </div>
-            </div>
+          <!-- CENTER CLUSTER: Select & Start -->
+          <div class="gamepad-center-meta">
+            <button class="cyber-meta-btn" data-gamepad="SELECT">SELECT</button>
+            <button class="cyber-meta-btn" data-gamepad="START">START</button>
           </div>
 
-          <!-- RIGHT CLUSTER: Glowing ABXY Diamond Buttons -->
-          <div class="cockpit-right-cluster">
+          <!-- RIGHT CLUSTER: ABXY Diamond -->
+          <div class="gamepad-side-cluster gamepad-right">
+            <div class="gamepad-triggers-row right">
+              <button class="cyber-trigger-btn" data-gamepad="RT">RT</button>
+              <button class="cyber-bumper-btn" data-gamepad="RB">RB</button>
+            </div>
             <div class="cyber-abxy-diamond">
-              <button class="abxy-btn btn-y" id="btnY" data-gamepad="Y">
-                <span>Y</span>
-              </button>
+              <button class="abxy-btn btn-y" data-gamepad="Y"><span>Y</span></button>
               <div class="abxy-mid-row">
-                <button class="abxy-btn btn-x" id="btnX" data-gamepad="X">
-                  <span>X</span>
-                </button>
+                <button class="abxy-btn btn-x" data-gamepad="X"><span>X</span></button>
                 <div class="abxy-diamond-axis"></div>
-                <button class="abxy-btn btn-b" id="btnB" data-gamepad="B">
-                  <span>B</span>
-                </button>
+                <button class="abxy-btn btn-b" data-gamepad="B"><span>B</span></button>
               </div>
-              <button class="abxy-btn btn-a" id="btnA" data-gamepad="A">
-                <span>A</span>
-              </button>
+              <button class="abxy-btn btn-a" data-gamepad="A"><span>A</span></button>
             </div>
           </div>
 

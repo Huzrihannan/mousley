@@ -8,7 +8,7 @@ on:
       tag_name:
         description: 'Release Tag (e.g. v1.0.4)'
         required: false
-        default: 'v1.2.1'
+        default: 'v1.2.2'
 
 permissions:
   contents: write
@@ -128,7 +128,7 @@ jobs:
           elif [[ -n "${{ github.event.inputs.tag_name }}" ]]; then
             TAG="${{ github.event.inputs.tag_name }}"
           else
-            TAG="v1.2.1"
+            TAG="v1.2.2"
           fi
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "Using tag: $TAG"
@@ -143,7 +143,7 @@ jobs:
           generate_release_notes: true
           files: release-binaries/*
           body: |
-            ## 🎮 Mousely Cyberpunk Gaming Controller & Gyro Steering Release ${{ steps.vars.outputs.tag }}
+            ## 🎮 Mousely Dual-Cockpit Gaming Controller & Gyro Racing Release ${{ steps.vars.outputs.tag }}
 
             ### 📦 Direct Downloads:
             - 🍏 **[`Mousely.ipa`](https://github.com/${{ github.repository }}/releases/download/${{ steps.vars.outputs.tag }}/Mousely.ipa)**: Native iOS app for **iPhone 7 Plus** and iOS 15.0+ devices with sub-millisecond UDP steering & input stream. Unsigned and ready for sideloading via TrollStore, AltStore, Sideloadly, or Scarlet.
@@ -152,9 +152,9 @@ jobs:
 
             ---
 
-            ### 🌟 What's New in v1.2.0:
-            - **🎮 Dedicated Mode Switcher Pill**: Switch instantly between Remote Deck (Product Red) and Gaming Controller (Cyberpunk Emerald Green `#00ff88`).
-            - **🏎️ Gyro Steering Engine**: Turn your phone into an ultra-responsive steering wheel using hardware gyroscope roll tilt in landscape orientation. Features a live SVG needle arch gauge, digital degree display, and 1-tap instant zero-recalibration.
-            - **🕹️ Adaptive Hybrid Controller**: Includes a multi-touch analog thumbstick, tactile 4-way D-pad, 3D glowing ABXY action diamond, LT/RT triggers (Brake/Gas), and LB/RB bumpers.
-            - **⚡ 9-Byte Binary Datagram Protocol (`0x10`)**: Streamlined UDP binary transport over port 58922 with Wi-Fi WMM QoS (`.responsiveData`) on iOS and high-performance WebSocket fallback.
-            - **🎮 Host Xbox 360 Emulation + Keyboard Fallback**: Supports ViGEmBus for native Xbox 360 controller detection across Steam, Forza, GTA, and EA Sports, with automatic WASD keyboard fallback if driver is not present.
+            ### 🌟 What's New in v1.2.2:
+            - **🏎️ Ergonomic Racing Cockpit Redesign**: Prominent vertical Brake (LT) and Gas (RT) pedals with rubber traction texture for natural left/right thumb placement, dedicated Handbrake (Space), Nitro (Shift), and Gear Down/Up paddle buttons.
+            - **🎯 Fast GPU Digital Horizon HUD**: Live center steering angle meter with 1-tap `0° Re-Center` button, digital degree readout, and GPU-accelerated horizontal indicator bar (`translate3d`).
+            - **❄️ Zero Thermal Throttling & 90% Reduced IPC Overhead**: CoreMotion background queue processing throttled to 20Hz, event-driven instant touch dispatch, and calm 13Hz keepalive heartbeat. Eliminates all phone heating and touch input lag.
+            - **✨ Perfect Mode Switching**: Fixed track collapse when toggling between Remote Deck and Gaming Controller. Trackpad and Media Deck layouts remain 100% stable with zero visual glitches.
+            - **🕹️ DirectX Hardware Scan Codes**: Set 1 keyboard scan codes (`SC_W`, `SC_S`, `SC_A`, `SC_D`, `SC_SPACE`, `SC_LSHIFT`) with 250ms safety watchdog for seamless PC gaming compatibility.
