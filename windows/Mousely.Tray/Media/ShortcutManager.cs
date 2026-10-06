@@ -18,11 +18,16 @@ namespace Mousely.Tray.Media
         private const byte VK_SHIFT = 0x10;
         private const byte VK_CONTROL = 0x11;
         private const byte VK_LWIN = 0x5B;
+        private const byte VK_DELETE = 0x2E;
+        private const byte VK_A = 0x41;
         private const byte VK_C = 0x43;
-        private const byte VK_V = 0x56;
+        private const byte VK_F = 0x46;
         private const byte VK_S = 0x53;
+        private const byte VK_V = 0x56;
+        private const byte VK_X = 0x58;
+        private const byte VK_Z = 0x5A;
 
-        public static void SendCopy()
+        private static void SendCtrlKey(byte vkKey, string name)
         {
             Task.Run(() =>
             {
@@ -30,38 +35,42 @@ namespace Mousely.Tray.Media
                 {
                     keybd_event(VK_CONTROL, 0, 0, UIntPtr.Zero);
                     Thread.Sleep(30);
-                    keybd_event(VK_C, 0, 0, UIntPtr.Zero);
+                    keybd_event(vkKey, 0, 0, UIntPtr.Zero);
                     Thread.Sleep(30);
-                    keybd_event(VK_C, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+                    keybd_event(vkKey, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
                     Thread.Sleep(30);
                     keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
-                    Console.WriteLine("[ShortcutManager] Sent Ctrl+C (Copy)");
+                    Console.WriteLine($"[ShortcutManager] Sent Ctrl+{name}");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[ShortcutManager] Copy error: {ex.Message}");
+                    Console.WriteLine($"[ShortcutManager] Error sending Ctrl+{name}: {ex.Message}");
                 }
             });
         }
 
-        public static void SendPaste()
+        public static void SendCut() => SendCtrlKey(VK_X, "X (Cut)");
+        public static void SendCopy() => SendCtrlKey(VK_C, "C (Copy)");
+        public static void SendPaste() => SendCtrlKey(VK_V, "V (Paste)");
+        public static void SendUndo() => SendCtrlKey(VK_Z, "Z (Undo)");
+        public static void SendSelectAll() => SendCtrlKey(VK_A, "A (Select All)");
+        public static void SendFind() => SendCtrlKey(VK_F, "F (Find)");
+        public static void SendSave() => SendCtrlKey(VK_S, "S (Save)");
+
+        public static void SendDelete()
         {
             Task.Run(() =>
             {
                 try
                 {
-                    keybd_event(VK_CONTROL, 0, 0, UIntPtr.Zero);
+                    keybd_event(VK_DELETE, 0, KEYEVENTF_EXTENDEDKEY, UIntPtr.Zero);
                     Thread.Sleep(30);
-                    keybd_event(VK_V, 0, 0, UIntPtr.Zero);
-                    Thread.Sleep(30);
-                    keybd_event(VK_V, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
-                    Thread.Sleep(30);
-                    keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
-                    Console.WriteLine("[ShortcutManager] Sent Ctrl+V (Paste)");
+                    keybd_event(VK_DELETE, 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, UIntPtr.Zero);
+                    Console.WriteLine("[ShortcutManager] Sent Del (Delete)");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[ShortcutManager] Paste error: {ex.Message}");
+                    Console.WriteLine($"[ShortcutManager] Delete error: {ex.Message}");
                 }
             });
         }

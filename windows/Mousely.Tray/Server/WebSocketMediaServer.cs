@@ -375,8 +375,14 @@ namespace Mousely.Tray.Server
 
                     case "clipboard_action":
                         string clipType = root.TryGetProperty("type", out var typeProp) ? typeProp.GetString() ?? "" : "";
-                        if (clipType == "copy") ShortcutManager.SendCopy();
+                        if (clipType == "cut") ShortcutManager.SendCut();
+                        else if (clipType == "copy") ShortcutManager.SendCopy();
                         else if (clipType == "paste") ShortcutManager.SendPaste();
+                        else if (clipType == "undo") ShortcutManager.SendUndo();
+                        else if (clipType == "delete") ShortcutManager.SendDelete();
+                        else if (clipType == "select_all") ShortcutManager.SendSelectAll();
+                        else if (clipType == "find") ShortcutManager.SendFind();
+                        else if (clipType == "save") ShortcutManager.SendSave();
                         else if (clipType == "history") ShortcutManager.SendClipboardHistory();
                         else if (clipType == "screenshot") ShortcutManager.SendScreenshot();
                         await SendJsonAsync(ws, new { type = "action_ack", action = "clipboard_action", clipType = clipType, success = true }, token);

@@ -8,7 +8,7 @@ on:
       tag_name:
         description: 'Release Tag (e.g. v1.0.4)'
         required: false
-        default: 'v1.0.7'
+        default: 'v1.0.8'
 
 permissions:
   contents: write
@@ -128,7 +128,7 @@ jobs:
           elif [[ -n "${{ github.event.inputs.tag_name }}" ]]; then
             TAG="${{ github.event.inputs.tag_name }}"
           else
-            TAG="v1.0.7"
+            TAG="v1.0.8"
           fi
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "Using tag: $TAG"
