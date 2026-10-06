@@ -23,6 +23,7 @@ namespace Mousely.Tray
         private readonly WindowsMediaManager _mediaManager;
         private readonly WebSocketMediaServer _server;
         private readonly UdpDiscoveryBeacon _beacon;
+        private readonly UdpInputServer _udpInputServer;
 
         private PairingForm? _pairingForm;
         private const string RunRegistryKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
@@ -31,6 +32,7 @@ namespace Mousely.Tray
         public AppTrayContext()
         {
             const int port = 58920;
+            const int udpInputPort = 58922;
             string wwwRoot = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "wwwroot");
 
             // Initialize Core Components
@@ -43,6 +45,9 @@ namespace Mousely.Tray
 
             _beacon = new UdpDiscoveryBeacon(port);
             _beacon.Start();
+
+            _udpInputServer = new UdpInputServer(udpInputPort);
+            _udpInputServer.Start();
 
             // Setup Context Menu
             _contextMenu = new ContextMenuStrip();
@@ -190,6 +195,7 @@ namespace Mousely.Tray
             _trayIcon.Visible = false;
             _trayIcon.Dispose();
 
+            _udpInputServer.Dispose();
             _beacon.Dispose();
             _server.Dispose();
             _mediaManager.Dispose();

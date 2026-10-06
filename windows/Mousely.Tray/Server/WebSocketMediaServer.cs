@@ -1,4 +1,5 @@
 using System;
+using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Net;
@@ -186,7 +187,8 @@ namespace Mousely.Tray.Server
                         deviceName = Environment.MachineName,
                         volume = (int)Math.Round(_audioVolume.GetMasterVolume() * 100),
                         muted = _audioVolume.GetMute(),
-                        media = _mediaManager.CurrentState
+                        media = _mediaManager.CurrentState,
+                        udpPort = 58922
                     };
                     string json = JsonSerializer.Serialize(stateObj);
                     byte[] jsonBytes = Encoding.UTF8.GetBytes(json);
@@ -284,7 +286,8 @@ namespace Mousely.Tray.Server
                     deviceName = Environment.MachineName,
                     volume = (int)Math.Round(_audioVolume.GetMasterVolume() * 100),
                     muted = _audioVolume.GetMute(),
-                    media = _mediaManager.CurrentState
+                    media = _mediaManager.CurrentState,
+                    udpPort = 58922
                 };
                 await SendJsonAsync(ws, initPayload, token);
 
@@ -302,6 +305,22 @@ namespace Mousely.Tray.Server
                     {
                         string message = Encoding.UTF8.GetString(buffer, 0, result.Count);
                         await HandleClientCommandAsync(ws, message, token);
+                    }
+                    else if (result.MessageType == WebSocketMessageType.Binary && result.Count >= 5)
+                    {
+                        byte packetId = buffer[0];
+                        if (packetId == 0x01) // Binary Mouse Move
+                        {
+                            short dx = BinaryPrimitives.ReadInt16BigEndian(buffer.AsSpan(1, 2));
+                            short dy = BinaryPrimitives.ReadInt16BigEndian(buffer.AsSpan(3, 2));
+                            MouseInputManager.Move(dx, dy);
+                        }
+                        else if (packetId == 0x02) // Binary Scroll
+                        {
+                            short deltaY = BinaryPrimitives.ReadInt16BigEndian(buffer.AsSpan(1, 2));
+                            short deltaX = BinaryPrimitives.ReadInt16BigEndian(buffer.AsSpan(3, 2));
+                            MouseInputManager.Scroll(deltaY, deltaX);
+                        }
                     }
                 }
             }

@@ -146,3 +146,77 @@ class NetworkDiscovery {
         stop()
     }
 }
+
+// MARK: - Ultra-Low Latency UDP Input Transmitter (Port 58922)
+public final class UdpInputTransmitter {
+    public static let shared = UdpInputTransmitter()
+
+    private var connection: NWConnection?
+    private var currentHost: String?
+    private var currentPort: UInt16 = 58922
+    private let queue = DispatchQueue(label: "com.mousely.udp.input", qos: .userInteractive)
+
+    public func setTarget(host: String, port: UInt16 = 58922) {
+        guard host != currentHost || port != currentPort else { return }
+        currentHost = host
+        currentPort = port
+
+        connection?.cancel()
+        connection = nil
+
+        guard !host.isEmpty else { return }
+
+        let endpointHost = NWEndpoint.Host(host)
+        guard let endpointPort = NWEndpoint.Port(rawValue: port) else { return }
+
+        let parameters = NWParameters.udp
+        parameters.serviceClass = .responsiveData
+        parameters.allowLocalEndpointReuse = true
+
+        let conn = NWConnection(host: endpointHost, port: endpointPort, using: parameters)
+        conn.stateUpdateHandler = { state in
+            switch state {
+            case .ready:
+                print("[UdpInputTransmitter] Stream connected -> \(host):\(port)")
+            case .failed(let error):
+                print("[UdpInputTransmitter] Stream error: \(error.localizedDescription)")
+            default:
+                break
+            }
+        }
+        conn.start(queue: queue)
+        self.connection = conn
+    }
+
+    public func sendMove(dx: Int16, dy: Int16) {
+        guard let connection = connection else { return }
+        var bytes = [UInt8](repeating: 0, count: 5)
+        bytes[0] = 0x01
+        let bDx = dx.bigEndian
+        let bDy = dy.bigEndian
+        withUnsafeBytes(of: bDx) { bytes[1] = $0[0]; bytes[2] = $0[1] }
+        withUnsafeBytes(of: bDy) { bytes[3] = $0[0]; bytes[4] = $0[1] }
+        let data = Data(bytes)
+
+        connection.send(content: data, completion: .idempotent)
+    }
+
+    public func sendScroll(deltaY: Int16, deltaX: Int16) {
+        guard let connection = connection else { return }
+        var bytes = [UInt8](repeating: 0, count: 5)
+        bytes[0] = 0x02
+        let bDy = deltaY.bigEndian
+        let bDx = deltaX.bigEndian
+        withUnsafeBytes(of: bDy) { bytes[1] = $0[0]; bytes[2] = $0[1] }
+        withUnsafeBytes(of: bDx) { bytes[3] = $0[0]; bytes[4] = $0[1] }
+        let data = Data(bytes)
+
+        connection.send(content: data, completion: .idempotent)
+    }
+
+    public func close() {
+        connection?.cancel()
+        connection = nil
+        currentHost = nil
+    }
+}

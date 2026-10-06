@@ -62,7 +62,8 @@ namespace Mousely.Tray.Server
                         name = Environment.MachineName,
                         ip = primaryIp,
                         port = _serverPort,
-                        version = "1.0.0"
+                        udpPort = 58922,
+                        version = "1.1.5"
                     };
 
                     byte[] bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(payload));
@@ -115,7 +116,8 @@ namespace Mousely.Tray.Server
                             name = Environment.MachineName,
                             ip = primaryIp,
                             port = _serverPort,
-                            version = "1.0.0"
+                            udpPort = 58922,
+                            version = "1.1.5"
                         };
                         byte[] responseBytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(response));
                         await _udpClient.SendAsync(responseBytes, responseBytes.Length, result.RemoteEndPoint);

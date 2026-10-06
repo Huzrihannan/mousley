@@ -187,6 +187,57 @@
     }
   };
 
+  // ================= ULTRA-LOW LATENCY INPUT STREAMING (UDP / BINARY) =================
+  const binaryMoveBuffer = new ArrayBuffer(5);
+  const binaryMoveView = new DataView(binaryMoveBuffer);
+  binaryMoveView.setUint8(0, 0x01); // 0x01 = Mouse Move
+
+  const binaryScrollBuffer = new ArrayBuffer(5);
+  const binaryScrollView = new DataView(binaryScrollBuffer);
+  binaryScrollView.setUint8(0, 0x02); // 0x02 = Scroll
+
+  function sendPointerMove(dx, dy) {
+    // 1. Ultra-Low Latency Native UDP Path (<1ms)
+    try {
+      if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.nativeApp) {
+        window.webkit.messageHandlers.nativeApp.postMessage({ action: 'udp_move', dx: dx, dy: dy });
+        return;
+      }
+    } catch (e) {}
+
+    // 2. High-Performance Binary WebSocket Frame Fallback (<2ms)
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      binaryMoveView.setInt16(1, dx, false); // Big Endian
+      binaryMoveView.setInt16(3, dy, false);
+      ws.send(binaryMoveBuffer);
+      return;
+    }
+
+    // 3. Standard JSON Fallback
+    sendCommand('mouse_move', { dx: dx, dy: dy });
+  }
+
+  function sendScroll(deltaY, deltaX) {
+    // 1. Ultra-Low Latency Native UDP Path (<1ms)
+    try {
+      if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.nativeApp) {
+        window.webkit.messageHandlers.nativeApp.postMessage({ action: 'udp_scroll', deltaY: deltaY, deltaX: deltaX });
+        return;
+      }
+    } catch (e) {}
+
+    // 2. High-Performance Binary WebSocket Frame Fallback (<2ms)
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      binaryScrollView.setInt16(1, deltaY, false); // Big Endian
+      binaryScrollView.setInt16(3, deltaX, false);
+      ws.send(binaryScrollBuffer);
+      return;
+    }
+
+    // 3. Standard JSON Fallback
+    sendCommand('scroll', { deltaY: deltaY, deltaX: deltaX });
+  }
+
   function setupMagicTrackpad() {
     const surface = document.getElementById('trackpadTouchSurface');
     const reticle = document.getElementById('trackpadReticle');
@@ -293,7 +344,7 @@
         const moveY = Math.round(dy * accel);
 
         if (moveX !== 0 || moveY !== 0) {
-          sendCommand('mouse_move', { dx: moveX, dy: moveY });
+          sendPointerMove(moveX, moveY);
         }
 
         t1LastX = cx;
@@ -345,7 +396,7 @@
             t2ScrollAccumX %= NOTCH_THRESHOLD;
           }
 
-          sendCommand('scroll', { deltaY: scrollStepY, deltaX: scrollStepX });
+          sendScroll(scrollStepY, scrollStepX);
 
           // "if input is 2 fingers then it will be considered scroll either horzontal or vertical, this must trigger the haptic engine on the phone as well"
           triggerHaptic('light');
@@ -794,9 +845,11 @@
 
     ws.onopen = function() {
       isConnected = true;
+      const hostIp = host.split(':')[0];
       try {
         if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.nativeApp) {
           window.webkit.messageHandlers.nativeApp.postMessage({ action: 'connectionState', state: 'connected' });
+          window.webkit.messageHandlers.nativeApp.postMessage({ action: 'setUdpTarget', host: hostIp, port: 58922 });
         }
       } catch (e) {}
 
@@ -847,6 +900,15 @@
 
   function handleServerMessage(msg) {
     if (!msg) return;
+
+    if (msg.udpPort) {
+      const hostIp = serverHost.split(':')[0];
+      try {
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.nativeApp) {
+          window.webkit.messageHandlers.nativeApp.postMessage({ action: 'setUdpTarget', host: hostIp, port: msg.udpPort });
+        }
+      } catch (e) {}
+    }
 
     if (msg.type === 'initial_state' || msg.type === 'state_update') {
       if (msg.media) updateMediaUI(msg.media);

@@ -134,7 +134,24 @@ class ViewController: UIViewController, WKScriptMessageHandler, WKNavigationDele
                 networkDiscovery.pauseBroadcastingQueries()
             } else if state == "disconnected" {
                 networkDiscovery.resumeBroadcastingQueries()
+                UdpInputTransmitter.shared.close()
             }
+
+        case "setUdpTarget":
+            if let host = body["host"] as? String {
+                let port = UInt16(body["port"] as? Int ?? 58922)
+                UdpInputTransmitter.shared.setTarget(host: host, port: port)
+            }
+
+        case "udp_move":
+            let dx = Int16(clamping: body["dx"] as? Int ?? 0)
+            let dy = Int16(clamping: body["dy"] as? Int ?? 0)
+            UdpInputTransmitter.shared.sendMove(dx: dx, dy: dy)
+
+        case "udp_scroll":
+            let deltaY = Int16(clamping: body["deltaY"] as? Int ?? 0)
+            let deltaX = Int16(clamping: body["deltaX"] as? Int ?? 0)
+            UdpInputTransmitter.shared.sendScroll(deltaY: deltaY, deltaX: deltaX)
 
         default:
             break
