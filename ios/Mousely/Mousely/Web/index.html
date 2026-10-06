@@ -28,43 +28,78 @@
   <div class="app-landscape-root">
     
     <!-- Top Liquid Glass Navigation Header -->
-    <header class="top-glass-header">
-      <div class="header-spacer"></div>
+    <header class="top-glass-header" id="topGlassHeader">
+      <!-- Master Mode Toggle Pill (Remote vs Controller) -->
+      <div class="master-mode-pill" id="masterModePill">
+        <button class="mode-pill-tab active" id="pillModeRemote" onclick="setMasterMode('remote')" title="Remote Control Mode">
+          <span class="mode-dot dot-red"></span>
+          <span>Remote</span>
+        </button>
+        <button class="mode-pill-tab" id="pillModeGame" onclick="setMasterMode('game')" title="Gaming Controller Mode">
+          <span class="mode-dot dot-green"></span>
+          <span>Controller</span>
+        </button>
+      </div>
 
-      <!-- Center: Liquid Glass Segmented Page Switcher (4 Pages) -->
+      <!-- Center: Liquid Glass Segmented Page Switcher -->
       <nav class="nav-segmented-glass" id="navTabs">
-        <button class="nav-glass-tab active" data-page="0" onclick="switchPage(0)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="2" y="3" width="20" height="18" rx="4"></rect>
-            <line x1="2" y1="15" x2="22" y2="15"></line>
-            <line x1="12" y1="15" x2="12" y2="21"></line>
-          </svg>
-          <span>Trackpad</span>
-        </button>
-        <button class="nav-glass-tab" data-page="1" onclick="switchPage(1)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 18V5l12-2v13"></path>
-            <circle cx="6" cy="18" r="3"></circle>
-            <circle cx="18" cy="16" r="3"></circle>
-          </svg>
-          <span>Media</span>
-        </button>
-        <button class="nav-glass-tab" data-page="2" onclick="switchPage(2)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="3" width="7" height="7"></rect>
-            <rect x="14" y="3" width="7" height="7"></rect>
-            <rect x="14" y="14" width="7" height="7"></rect>
-            <rect x="3" y="14" width="7" height="7"></rect>
-          </svg>
-          <span>Apps (8)</span>
-        </button>
-        <button class="nav-glass-tab" data-page="3" onclick="switchPage(3)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
-          </svg>
-          <span>Actions</span>
-        </button>
+        <!-- Remote Mode Pages (Trackpad, Media, Apps, Actions) -->
+        <div class="header-tabs-group" id="remoteTabsGroup">
+          <button class="nav-glass-tab active" data-page="0" onclick="switchPage(0)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="3" width="20" height="18" rx="4"></rect>
+              <line x1="2" y1="15" x2="22" y2="15"></line>
+              <line x1="12" y1="15" x2="12" y2="21"></line>
+            </svg>
+            <span>Trackpad</span>
+          </button>
+          <button class="nav-glass-tab" data-page="1" onclick="switchPage(1)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 18V5l12-2v13"></path>
+              <circle cx="6" cy="18" r="3"></circle>
+              <circle cx="18" cy="16" r="3"></circle>
+            </svg>
+            <span>Media</span>
+          </button>
+          <button class="nav-glass-tab" data-page="2" onclick="switchPage(2)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+            <span>Apps</span>
+          </button>
+          <button class="nav-glass-tab" data-page="3" onclick="switchPage(3)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+              <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+            </svg>
+            <span>Actions</span>
+          </button>
+        </div>
+
+        <!-- Controller Sub-Mode Tabs (Gamepad ↔ Gyro Steering) -->
+        <div class="header-tabs-group hidden" id="gameTabsGroup">
+          <button class="nav-glass-tab active controller-sub-tab" id="subTabGamepad" onclick="setControllerSubMode('gamepad')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <rect x="2" y="6" width="20" height="12" rx="4"></rect>
+              <line x1="6" y1="12" x2="10" y2="12"></line>
+              <line x1="8" y1="10" x2="8" y2="14"></line>
+              <circle cx="15" cy="12" r="1"></circle>
+              <circle cx="18" cy="10" r="1"></circle>
+            </svg>
+            <span>Gamepad</span>
+          </button>
+          <button class="nav-glass-tab controller-sub-tab" id="subTabGyro" onclick="setControllerSubMode('gyro')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <circle cx="12" cy="12" r="9"></circle>
+              <path d="M12 3v18"></path>
+              <path d="M3 12h18"></path>
+            </svg>
+            <span>🏎️ Gyro Steering</span>
+          </button>
+        </div>
       </nav>
 
       <!-- Right: Settings / Discovered PCs Button -->
@@ -468,6 +503,137 @@
 
           </div>
         </section>
+
+      </div>
+    </div>
+
+    <!-- =========================================================================
+         GAME CONTROLLER VIEWPORT (Cyberpunk Emerald Green Liquid Glass)
+         ========================================================================= -->
+    <div class="game-controller-viewport hidden" id="gameControllerViewport">
+      <div class="cyber-controller-card" id="cyberControllerCard">
+        <div class="controller-glass-specular"></div>
+
+        <!-- Top Shoulder & Trigger Bar (LT / LB and RB / RT + Meta Buttons) -->
+        <div class="controller-trigger-bar">
+          <div class="trigger-cluster left-triggers">
+            <button class="cyber-trigger-btn btn-l2" id="btnTriggerL2" data-gamepad="LT">
+              <span class="trigger-label">LT</span>
+              <span class="trigger-sub">Brake</span>
+            </button>
+            <button class="cyber-bumper-btn btn-l1" id="btnTriggerL1" data-gamepad="LB">
+              <span class="trigger-label">LB</span>
+            </button>
+          </div>
+
+          <!-- Center Meta Buttons (Select / Center Gyro / Start) -->
+          <div class="controller-center-meta">
+            <button class="cyber-meta-btn" id="btnGameSelect" data-gamepad="SELECT" title="Select / Back">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="6" x2="20" y2="6"></line></svg>
+              <span>SELECT</span>
+            </button>
+            <button class="cyber-calibrate-btn" id="btnGyroCalibrate" onclick="recalibrateGyro()" title="Re-Center Steering Angle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+              <span>CENTER GYRO</span>
+            </button>
+            <button class="cyber-meta-btn" id="btnGameStart" data-gamepad="START" title="Start / Menu">
+              <span>START</span>
+              <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            </button>
+          </div>
+
+          <div class="trigger-cluster right-triggers">
+            <button class="cyber-bumper-btn btn-r1" id="btnTriggerR1" data-gamepad="RB">
+              <span class="trigger-label">RB</span>
+            </button>
+            <button class="cyber-trigger-btn btn-r2" id="btnTriggerR2" data-gamepad="RT">
+              <span class="trigger-label">RT</span>
+              <span class="trigger-sub">Gas</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Cockpit Controls Zone (Left Cluster / Center Gyro HUD / Right Cluster) -->
+        <div class="controller-cockpit-zone">
+          
+          <!-- LEFT CLUSTER: Precision Analog Thumbstick & D-Pad -->
+          <div class="cockpit-left-cluster">
+            <!-- Analog Thumbstick -->
+            <div class="cyber-thumbstick-zone" id="thumbstickZone">
+              <div class="thumbstick-base" id="thumbstickBase">
+                <div class="thumbstick-crosshair"></div>
+                <div class="thumbstick-knob" id="thumbstickKnob">
+                  <div class="knob-core"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tactile D-Pad -->
+            <div class="cyber-dpad" id="cyberDpad">
+              <button class="dpad-btn dpad-up" id="dpadUp" data-gamepad="DPAD_UP">▲</button>
+              <button class="dpad-btn dpad-left" id="dpadLeft" data-gamepad="DPAD_LEFT">◀</button>
+              <div class="dpad-center"></div>
+              <button class="dpad-btn dpad-right" id="dpadRight" data-gamepad="DPAD_RIGHT">▶</button>
+              <button class="dpad-btn dpad-down" id="dpadDown" data-gamepad="DPAD_DOWN">▼</button>
+            </div>
+          </div>
+
+          <!-- CENTER CLUSTER: Dynamic Gyro Steering Arch & Horizon Gauge -->
+          <div class="cockpit-center-cluster" id="cockpitCenterCluster">
+            <div class="gyro-hud-card" id="gyroHudCard">
+              <div class="gyro-arch-container">
+                <svg class="gyro-arch-svg" viewBox="0 0 240 130">
+                  <!-- Outer Track Arc -->
+                  <path class="arc-track" d="M 25 115 A 95 95 0 0 1 215 115" fill="none" stroke="rgba(0,255,136,0.18)" stroke-width="12" stroke-linecap="round"></path>
+                  <!-- Active Steering Glow Fill -->
+                  <path class="arc-fill" id="gyroArcFill" d="M 120 20 A 95 95 0 0 1 120 20" fill="none" stroke="#00ff88" stroke-width="12" stroke-linecap="round"></path>
+                  <!-- Center Reference Marker -->
+                  <line x1="120" y1="10" x2="120" y2="28" stroke="#ffffff" stroke-width="3"></line>
+                  <!-- Angle Graduation Ticks -->
+                  <line x1="60" y1="52" x2="68" y2="60" stroke="rgba(255,255,255,0.4)" stroke-width="2"></line>
+                  <line x1="180" y1="52" x2="172" y2="60" stroke="rgba(255,255,255,0.4)" stroke-width="2"></line>
+                  <!-- Dynamic Steering Needle -->
+                  <line class="arc-needle" id="gyroNeedle" x1="120" y1="115" x2="120" y2="30" stroke="#00ff88" stroke-width="3.5" stroke-linecap="round"></line>
+                  <circle cx="120" cy="115" r="10" fill="#03150b" stroke="#00ff88" stroke-width="2.5"></circle>
+                </svg>
+              </div>
+
+              <!-- Degree & Direction Live Display -->
+              <div class="gyro-readout-wrap">
+                <div class="gyro-degree-box">
+                  <span class="gyro-deg-num" id="gyroDegreeNum">0°</span>
+                  <span class="gyro-deg-status" id="gyroDirectionTag">CENTER</span>
+                </div>
+                <div class="gyro-mode-indicator" id="gyroActivePill">
+                  <span class="gyro-live-dot"></span>
+                  <span id="gyroModeText">GYRO STEERING ACTIVE</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT CLUSTER: Glowing ABXY Diamond Buttons -->
+          <div class="cockpit-right-cluster">
+            <div class="cyber-abxy-diamond">
+              <button class="abxy-btn btn-y" id="btnY" data-gamepad="Y">
+                <span>Y</span>
+              </button>
+              <div class="abxy-mid-row">
+                <button class="abxy-btn btn-x" id="btnX" data-gamepad="X">
+                  <span>X</span>
+                </button>
+                <div class="abxy-diamond-axis"></div>
+                <button class="abxy-btn btn-b" id="btnB" data-gamepad="B">
+                  <span>B</span>
+                </button>
+              </div>
+              <button class="abxy-btn btn-a" id="btnA" data-gamepad="A">
+                <span>A</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
 
       </div>
     </div>

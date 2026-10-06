@@ -1052,9 +1052,414 @@
     });
   }
 
+  // ================= 12. GAME CONTROLLER & GYRO STEERING ENGINE =================
+  let masterMode = 'remote'; // 'remote' | 'game'
+  let controllerSubMode = 'gamepad'; // 'gamepad' | 'gyro'
+
+  let gamepadButtonMask = 0;
+  let gamepadStickX = 0;
+  let gamepadStickY = 0;
+  let gamepadLt = 0;
+  let gamepadRt = 0;
+
+  let rawGyroRoll = 0;
+  let calibratedRollOffset = 0;
+  let currentSteeringAngle = 0;
+  let isDeviceOrientationListening = false;
+  const GYRO_MAX_DEG = 35.0;
+  const GYRO_DEADZONE_DEG = 1.8;
+
+  const binaryGamepadBuffer = new ArrayBuffer(9);
+  const binaryGamepadView = new DataView(binaryGamepadBuffer);
+  binaryGamepadView.setUint8(0, 0x10); // Packet 0x10 = Gamepad Frame
+
+  let gamepadStreamRaf = null;
+  let lastGamepadDispatch = 0;
+
+  const BUTTON_BIT_MAP = {
+    'A': 0,
+    'B': 1,
+    'X': 2,
+    'Y': 3,
+    'DPAD_UP': 4,
+    'DPAD_DOWN': 5,
+    'DPAD_LEFT': 6,
+    'DPAD_RIGHT': 7,
+    'LB': 8,
+    'RB': 9,
+    'SELECT': 10,
+    'START': 11,
+    'L3': 12
+  };
+
+  const masterModePill = document.getElementById('masterModePill');
+  const pillModeRemote = document.getElementById('pillModeRemote');
+  const pillModeGame = document.getElementById('pillModeGame');
+  const remoteTabsGroup = document.getElementById('remoteTabsGroup');
+  const gameTabsGroup = document.getElementById('gameTabsGroup');
+  const subTabGamepad = document.getElementById('subTabGamepad');
+  const subTabGyro = document.getElementById('subTabGyro');
+  const carouselViewport = document.getElementById('carouselViewport');
+  const gameControllerViewport = document.getElementById('gameControllerViewport');
+  const gyroNeedle = document.getElementById('gyroNeedle');
+  const gyroDegreeNum = document.getElementById('gyroDegreeNum');
+  const gyroDirectionTag = document.getElementById('gyroDirectionTag');
+  const gyroModeText = document.getElementById('gyroModeText');
+  const thumbstickZone = document.getElementById('thumbstickZone');
+  const thumbstickBase = document.getElementById('thumbstickBase');
+  const thumbstickKnob = document.getElementById('thumbstickKnob');
+
+  window.setMasterMode = function(mode) {
+    if (mode === masterMode) return;
+    masterMode = mode;
+
+    if (mode === 'game') {
+      if (masterModePill) masterModePill.classList.add('theme-green');
+      if (pillModeGame) pillModeGame.classList.add('active');
+      if (pillModeRemote) pillModeRemote.classList.remove('active');
+      if (navTabs) navTabs.classList.add('theme-green');
+      if (remoteTabsGroup) remoteTabsGroup.classList.add('hidden');
+      if (gameTabsGroup) gameTabsGroup.classList.remove('hidden');
+      if (carouselViewport) carouselViewport.classList.add('hidden');
+      if (gameControllerViewport) gameControllerViewport.classList.remove('hidden');
+
+      requestOrientationPermission();
+      recalibrateGyro();
+      startGamepadLoop();
+      showToast('Cyberpunk Controller Active', '🎮');
+    } else {
+      if (masterModePill) masterModePill.classList.remove('theme-green');
+      if (pillModeRemote) pillModeRemote.classList.add('active');
+      if (pillModeGame) pillModeGame.classList.remove('active');
+      if (navTabs) navTabs.classList.remove('theme-green');
+      if (gameTabsGroup) gameTabsGroup.classList.add('hidden');
+      if (remoteTabsGroup) remoteTabsGroup.classList.remove('hidden');
+      if (gameControllerViewport) gameControllerViewport.classList.add('hidden');
+      if (carouselViewport) carouselViewport.classList.remove('hidden');
+
+      stopGamepadLoop();
+      showToast('Remote Deck Active', '✨');
+    }
+    triggerHaptic('medium');
+  };
+
+  window.setControllerSubMode = function(subMode) {
+    controllerSubMode = subMode;
+    if (subTabGamepad) subTabGamepad.classList.toggle('active', subMode === 'gamepad');
+    if (subTabGyro) subTabGyro.classList.toggle('active', subMode === 'gyro');
+    if (gyroModeText) {
+      gyroModeText.textContent = subMode === 'gyro' ? 'GYRO STEERING ACTIVE' : 'GAMEPAD STICK ACTIVE';
+    }
+    triggerHaptic('light');
+  };
+
+  window.recalibrateGyro = function() {
+    calibratedRollOffset = rawGyroRoll;
+    if (gyroDegreeNum) gyroDegreeNum.textContent = '0°';
+    if (gyroDirectionTag) gyroDirectionTag.textContent = 'CENTER';
+    if (gyroNeedle) gyroNeedle.style.transform = 'rotate(0deg)';
+    triggerHaptic('medium');
+    showToast('Gyro Zero-Point Calibrated', '🏎️');
+  };
+
+  function requestOrientationPermission() {
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      DeviceOrientationEvent.requestPermission()
+        .then(response => {
+          if (response === 'granted') {
+            startOrientationListener();
+          }
+        })
+        .catch(() => {});
+    } else {
+      startOrientationListener();
+    }
+  }
+
+  function startOrientationListener() {
+    if (isDeviceOrientationListening) return;
+    isDeviceOrientationListening = true;
+    window.addEventListener('deviceorientation', handleDeviceOrientation, { passive: true });
+  }
+
+  function handleDeviceOrientation(e) {
+    if (masterMode !== 'game') return;
+
+    let roll = 0;
+    const orient = window.orientation;
+    if (orient === 90) {
+      roll = -e.beta;
+    } else if (orient === -90) {
+      roll = e.beta;
+    } else {
+      roll = (Math.abs(e.gamma) > Math.abs(e.beta)) ? e.gamma : (e.beta || 0);
+    }
+
+    if (isNaN(roll)) return;
+    rawGyroRoll = roll;
+
+    let effective = roll - calibratedRollOffset;
+    if (effective > 180) effective -= 360;
+    if (effective < -180) effective += 360;
+
+    if (Math.abs(effective) < GYRO_DEADZONE_DEG) {
+      effective = 0;
+    }
+
+    const clampedDeg = Math.max(-GYRO_MAX_DEG, Math.min(GYRO_MAX_DEG, effective));
+    currentSteeringAngle = clampedDeg;
+
+    const visualNeedleDeg = (clampedDeg / GYRO_MAX_DEG) * 45;
+    if (gyroNeedle) {
+      gyroNeedle.style.transform = `rotate(${visualNeedleDeg.toFixed(1)}deg)`;
+    }
+
+    if (gyroDegreeNum) {
+      const sign = clampedDeg > 0 ? '+' : '';
+      gyroDegreeNum.textContent = `${sign}${Math.round(clampedDeg)}°`;
+    }
+
+    if (gyroDirectionTag) {
+      if (Math.abs(clampedDeg) < 1.5) {
+        gyroDirectionTag.textContent = 'CENTER';
+      } else if (clampedDeg < 0) {
+        gyroDirectionTag.textContent = 'STEER LEFT';
+      } else {
+        gyroDirectionTag.textContent = 'STEER RIGHT';
+      }
+    }
+  }
+
+  function startGamepadLoop() {
+    if (gamepadStreamRaf) return;
+    function loop(now) {
+      if (masterMode !== 'game') {
+        gamepadStreamRaf = null;
+        return;
+      }
+
+      if (now - lastGamepadDispatch >= 15) { // ~60fps
+        lastGamepadDispatch = now;
+        dispatchGamepadState();
+      }
+
+      gamepadStreamRaf = requestAnimationFrame(loop);
+    }
+    gamepadStreamRaf = requestAnimationFrame(loop);
+  }
+
+  function stopGamepadLoop() {
+    if (gamepadStreamRaf) {
+      cancelAnimationFrame(gamepadStreamRaf);
+      gamepadStreamRaf = null;
+    }
+    dispatchGamepadFrame(0, 0, 0, 0, 0);
+  }
+
+  function dispatchGamepadState() {
+    let effX = gamepadStickX;
+    let effY = gamepadStickY;
+
+    if (controllerSubMode === 'gyro' || Math.abs(currentSteeringAngle) > 0.5) {
+      if (gamepadStickX === 0) {
+        const norm = currentSteeringAngle / GYRO_MAX_DEG;
+        const curved = Math.sign(norm) * Math.pow(Math.abs(norm), 1.25);
+        effX = Math.round(curved * 32767);
+      }
+    }
+
+    dispatchGamepadFrame(effX, effY, gamepadLt, gamepadRt, gamepadButtonMask);
+  }
+
+  function dispatchGamepadFrame(stickX, stickY, lt, rt, buttons) {
+    try {
+      if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.nativeApp) {
+        window.webkit.messageHandlers.nativeApp.postMessage({
+          action: 'udp_gamepad',
+          stickX: stickX,
+          stickY: stickY,
+          lt: lt,
+          rt: rt,
+          buttons: buttons
+        });
+        return;
+      }
+    } catch (e) {}
+
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      binaryGamepadView.setInt16(1, stickX, false);
+      binaryGamepadView.setInt16(3, stickY, false);
+      binaryGamepadView.setUint8(5, lt);
+      binaryGamepadView.setUint8(6, rt);
+      binaryGamepadView.setUint16(7, buttons, false);
+      ws.send(binaryGamepadBuffer);
+    }
+  }
+
+  function setupCyberController() {
+    if (!gameControllerViewport) return;
+
+    // 1. Setup Button Handlers
+    const gamepadButtons = gameControllerViewport.querySelectorAll('[data-gamepad]');
+    gamepadButtons.forEach(btn => {
+      const padKey = btn.getAttribute('data-gamepad');
+
+      const onPress = (e) => {
+        if (e) e.preventDefault();
+        btn.classList.add('active');
+        btn.classList.add('pressed');
+        triggerHaptic('light');
+
+        if (padKey === 'LT') {
+          gamepadLt = 255;
+        } else if (padKey === 'RT') {
+          gamepadRt = 255;
+        } else if (BUTTON_BIT_MAP[padKey] !== undefined) {
+          gamepadButtonMask |= (1 << BUTTON_BIT_MAP[padKey]);
+        }
+        dispatchGamepadState();
+      };
+
+      const onRelease = (e) => {
+        if (e) e.preventDefault();
+        btn.classList.remove('active');
+        btn.classList.remove('pressed');
+
+        if (padKey === 'LT') {
+          gamepadLt = 0;
+        } else if (padKey === 'RT') {
+          gamepadRt = 0;
+        } else if (BUTTON_BIT_MAP[padKey] !== undefined) {
+          gamepadButtonMask &= ~(1 << BUTTON_BIT_MAP[padKey]);
+        }
+        dispatchGamepadState();
+      };
+
+      btn.addEventListener('touchstart', onPress, { passive: false });
+      btn.addEventListener('touchend', onRelease, { passive: false });
+      btn.addEventListener('touchcancel', onRelease, { passive: false });
+
+      btn.addEventListener('mousedown', onPress);
+      btn.addEventListener('mouseup', onRelease);
+      btn.addEventListener('mouseleave', onRelease);
+    });
+
+    // 2. Setup Virtual Analog Thumbstick
+    if (thumbstickZone && thumbstickKnob) {
+      let activeTouchId = null;
+      let zoneCenterX = 0;
+      let zoneCenterY = 0;
+      const MAX_STICK_RADIUS = 34;
+
+      function getZoneCenter() {
+        const rect = thumbstickBase ? thumbstickBase.getBoundingClientRect() : thumbstickZone.getBoundingClientRect();
+        return {
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2
+        };
+      }
+
+      function updateStickFromCoord(clientX, clientY) {
+        const dx = clientX - zoneCenterX;
+        const dy = clientY - zoneCenterY;
+        const distance = Math.hypot(dx, dy);
+
+        let clampedX = dx;
+        let clampedY = dy;
+        if (distance > MAX_STICK_RADIUS) {
+          const ratio = MAX_STICK_RADIUS / distance;
+          clampedX = dx * ratio;
+          clampedY = dy * ratio;
+        }
+
+        thumbstickKnob.style.transform = `translate3d(${clampedX}px, ${clampedY}px, 0)`;
+
+        gamepadStickX = Math.round((clampedX / MAX_STICK_RADIUS) * 32767);
+        gamepadStickY = Math.round((-clampedY / MAX_STICK_RADIUS) * 32767);
+      }
+
+      function resetStick() {
+        thumbstickKnob.classList.remove('dragging');
+        thumbstickKnob.style.transform = 'translate3d(0, 0, 0)';
+        gamepadStickX = 0;
+        gamepadStickY = 0;
+        activeTouchId = null;
+        dispatchGamepadState();
+      }
+
+      thumbstickZone.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if (activeTouchId !== null) return;
+        const touch = e.changedTouches[0];
+        activeTouchId = touch.identifier;
+        const center = getZoneCenter();
+        zoneCenterX = center.x;
+        zoneCenterY = center.y;
+        thumbstickKnob.classList.add('dragging');
+        updateStickFromCoord(touch.clientX, touch.clientY);
+        triggerHaptic('light');
+      }, { passive: false });
+
+      window.addEventListener('touchmove', (e) => {
+        if (activeTouchId === null) return;
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          const touch = e.changedTouches[i];
+          if (touch.identifier === activeTouchId) {
+            e.preventDefault();
+            updateStickFromCoord(touch.clientX, touch.clientY);
+            break;
+          }
+        }
+      }, { passive: false });
+
+      window.addEventListener('touchend', (e) => {
+        if (activeTouchId === null) return;
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          if (e.changedTouches[i].identifier === activeTouchId) {
+            resetStick();
+            break;
+          }
+        }
+      }, { passive: false });
+
+      window.addEventListener('touchcancel', (e) => {
+        if (activeTouchId === null) return;
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          if (e.changedTouches[i].identifier === activeTouchId) {
+            resetStick();
+            break;
+          }
+        }
+      }, { passive: false });
+
+      let isMouseDownStick = false;
+      thumbstickZone.addEventListener('mousedown', (e) => {
+        isMouseDownStick = true;
+        const center = getZoneCenter();
+        zoneCenterX = center.x;
+        zoneCenterY = center.y;
+        thumbstickKnob.classList.add('dragging');
+        updateStickFromCoord(e.clientX, e.clientY);
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!isMouseDownStick) return;
+        updateStickFromCoord(e.clientX, e.clientY);
+      });
+
+      window.addEventListener('mouseup', () => {
+        if (isMouseDownStick) {
+          isMouseDownStick = false;
+          resetStick();
+        }
+      });
+    }
+  }
+
   // ================= 11. INITIALIZATION =================
   window.addEventListener('DOMContentLoaded', () => {
     setupMagicTrackpad();
+    setupCyberController();
     initWaveformBars();
     setupWaveformEvents();
     setupVolumeEvents();

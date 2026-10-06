@@ -8,7 +8,7 @@ on:
       tag_name:
         description: 'Release Tag (e.g. v1.0.4)'
         required: false
-        default: 'v1.1.5'
+        default: 'v1.2.0'
 
 permissions:
   contents: write
@@ -128,7 +128,7 @@ jobs:
           elif [[ -n "${{ github.event.inputs.tag_name }}" ]]; then
             TAG="${{ github.event.inputs.tag_name }}"
           else
-            TAG="v1.1.5"
+            TAG="v1.2.0"
           fi
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "Using tag: $TAG"
@@ -143,17 +143,18 @@ jobs:
           generate_release_notes: true
           files: release-binaries/*
           body: |
-            ## ⚡ Mousely Ultra-Low Latency Release ${{ steps.vars.outputs.tag }}
+            ## 🎮 Mousely Cyberpunk Gaming Controller & Gyro Steering Release ${{ steps.vars.outputs.tag }}
 
             ### 📦 Direct Downloads:
-            - 🍏 **[`Mousely.ipa`](https://github.com/${{ github.repository }}/releases/download/${{ steps.vars.outputs.tag }}/Mousely.ipa)**: Native iOS app for **iPhone 7 Plus** and iOS 15.0+ devices with Native UDP input transmitter. Unsigned and ready for sideloading via TrollStore, AltStore, Sideloadly, or Scarlet.
-            - 🖥️ **[`Mousely.exe`](https://github.com/${{ github.repository }}/releases/download/${{ steps.vars.outputs.tag }}/Mousely.exe)**: Standalone Windows tray application.
+            - 🍏 **[`Mousely.ipa`](https://github.com/${{ github.repository }}/releases/download/${{ steps.vars.outputs.tag }}/Mousely.ipa)**: Native iOS app for **iPhone 7 Plus** and iOS 15.0+ devices with sub-millisecond UDP steering & input stream. Unsigned and ready for sideloading via TrollStore, AltStore, Sideloadly, or Scarlet.
+            - 🖥️ **[`Mousely.exe`](https://github.com/${{ github.repository }}/releases/download/${{ steps.vars.outputs.tag }}/Mousely.exe)**: Standalone Windows tray application with ViGEm virtual Xbox 360 controller emulation & zero-config keyboard fallback.
             - 📦 **[`Mousely-Windows-Tray-x64.zip`](https://github.com/${{ github.repository }}/releases/download/${{ steps.vars.outputs.tag }}/Mousely-Windows-Tray-x64.zip)**: Complete Windows distribution package.
 
             ---
 
-            ### ⚡ What's New in v1.1.5:
-            - **🚀 Dual-Channel Hybrid UDP Transport**: Real-time pointer motion and scrolling stream over a dedicated, connectionless UDP channel (port 58922) with zero Head-of-Line blocking or TCP retransmission lag.
-            - **📦 5-Byte Zero-Allocation Binary Wire Protocol**: Replaced heavy JSON serialization with 5-byte compact binary datagrams parsed directly via `BinaryPrimitives` on a high-priority host thread.
-            - **📡 Wi-Fi WMM QoS Tagging**: Swift's `NWConnection` configured with `.responsiveData` (AC_VI) QoS, preventing iOS from placing the Wi-Fi chip into power-saving sleep and eliminating random 20-50ms latency spikes.
-            - **🔄 Universal Fallback**: High-performance binary WebSocket frames for web browsers and automatic TCP fallback if UDP is firewalled.
+            ### 🌟 What's New in v1.2.0:
+            - **🎮 Dedicated Mode Switcher Pill**: Switch instantly between Remote Deck (Product Red) and Gaming Controller (Cyberpunk Emerald Green `#00ff88`).
+            - **🏎️ Gyro Steering Engine**: Turn your phone into an ultra-responsive steering wheel using hardware gyroscope roll tilt in landscape orientation. Features a live SVG needle arch gauge, digital degree display, and 1-tap instant zero-recalibration.
+            - **🕹️ Adaptive Hybrid Controller**: Includes a multi-touch analog thumbstick, tactile 4-way D-pad, 3D glowing ABXY action diamond, LT/RT triggers (Brake/Gas), and LB/RB bumpers.
+            - **⚡ 9-Byte Binary Datagram Protocol (`0x10`)**: Streamlined UDP binary transport over port 58922 with Wi-Fi WMM QoS (`.responsiveData`) on iOS and high-performance WebSocket fallback.
+            - **🎮 Host Xbox 360 Emulation + Keyboard Fallback**: Supports ViGEmBus for native Xbox 360 controller detection across Steam, Forza, GTA, and EA Sports, with automatic WASD keyboard fallback if driver is not present.

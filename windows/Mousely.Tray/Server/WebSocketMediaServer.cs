@@ -321,6 +321,15 @@ namespace Mousely.Tray.Server
                             short deltaX = BinaryPrimitives.ReadInt16BigEndian(buffer.AsSpan(3, 2));
                             MouseInputManager.Scroll(deltaY, deltaX);
                         }
+                        else if (packetId == 0x10 && result.Count >= 9) // Binary Gamepad Frame
+                        {
+                            short stickX = BinaryPrimitives.ReadInt16BigEndian(buffer.AsSpan(1, 2));
+                            short stickY = BinaryPrimitives.ReadInt16BigEndian(buffer.AsSpan(3, 2));
+                            byte lt = buffer[5];
+                            byte rt = buffer[6];
+                            ushort buttonMask = BinaryPrimitives.ReadUInt16BigEndian(buffer.AsSpan(7, 2));
+                            GamepadManager.ProcessGamepadFrame(stickX, stickY, lt, rt, buttonMask);
+                        }
                     }
                 }
             }

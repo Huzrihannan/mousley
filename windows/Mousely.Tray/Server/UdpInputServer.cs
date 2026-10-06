@@ -78,6 +78,15 @@ namespace Mousely.Tray.Server
                     {
                         _socket.SendTo(new byte[] { 0x03 }, remoteEp);
                     }
+                    else if (packetId == 0x10 && bytesReceived >= 9) // Real-time Gamepad Frame
+                    {
+                        short stickX = BinaryPrimitives.ReadInt16BigEndian(buffer.AsSpan(1, 2));
+                        short stickY = BinaryPrimitives.ReadInt16BigEndian(buffer.AsSpan(3, 2));
+                        byte lt = buffer[5];
+                        byte rt = buffer[6];
+                        ushort buttonMask = BinaryPrimitives.ReadUInt16BigEndian(buffer.AsSpan(7, 2));
+                        GamepadManager.ProcessGamepadFrame(stickX, stickY, lt, rt, buttonMask);
+                    }
                 }
                 catch (SocketException) when (!_isRunning)
                 {

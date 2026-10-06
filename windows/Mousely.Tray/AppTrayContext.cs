@@ -200,6 +200,7 @@ namespace Mousely.Tray
             _server.Dispose();
             _mediaManager.Dispose();
             _audioVolume.Dispose();
+            GamepadManager.Shutdown();
 
             ExitThread();
         }

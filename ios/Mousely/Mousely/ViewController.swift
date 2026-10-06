@@ -153,6 +153,14 @@ class ViewController: UIViewController, WKScriptMessageHandler, WKNavigationDele
             let deltaX = Int16(clamping: body["deltaX"] as? Int ?? 0)
             UdpInputTransmitter.shared.sendScroll(deltaY: deltaY, deltaX: deltaX)
 
+        case "udp_gamepad":
+            let stickX = Int16(clamping: body["stickX"] as? Int ?? 0)
+            let stickY = Int16(clamping: body["stickY"] as? Int ?? 0)
+            let lt = UInt8(clamping: body["lt"] as? Int ?? 0)
+            let rt = UInt8(clamping: body["rt"] as? Int ?? 0)
+            let buttons = UInt16(clamping: body["buttons"] as? Int ?? 0)
+            UdpInputTransmitter.shared.sendGamepad(stickX: stickX, stickY: stickY, lt: lt, rt: rt, buttons: buttons)
+
         default:
             break
         }

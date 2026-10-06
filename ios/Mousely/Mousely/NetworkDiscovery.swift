@@ -214,6 +214,23 @@ public final class UdpInputTransmitter {
         connection.send(content: data, completion: .idempotent)
     }
 
+    public func sendGamepad(stickX: Int16, stickY: Int16, lt: UInt8, rt: UInt8, buttons: UInt16) {
+        guard let connection = connection else { return }
+        var bytes = [UInt8](repeating: 0, count: 9)
+        bytes[0] = 0x10 // Packet 0x10 Gamepad frame
+        let bX = stickX.bigEndian
+        let bY = stickY.bigEndian
+        withUnsafeBytes(of: bX) { bytes[1] = $0[0]; bytes[2] = $0[1] }
+        withUnsafeBytes(of: bY) { bytes[3] = $0[0]; bytes[4] = $0[1] }
+        bytes[5] = lt
+        bytes[6] = rt
+        let bBtn = buttons.bigEndian
+        withUnsafeBytes(of: bBtn) { bytes[7] = $0[0]; bytes[8] = $0[1] }
+        let data = Data(bytes)
+
+        connection.send(content: data, completion: .idempotent)
+    }
+
     public func close() {
         connection?.cancel()
         connection = nil
