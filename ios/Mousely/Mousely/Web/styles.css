@@ -294,7 +294,7 @@ html, body {
 
 .carousel-slider-track {
   display: flex;
-  width: 300%;
+  width: 400%;
   height: 100%;
   transform: translate3d(0, 0, 0);
   transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
@@ -302,13 +302,209 @@ html, body {
 }
 
 .carousel-page-pane {
-  width: 33.333333%;
+  width: 25%;
   height: 100%;
   padding: 0 4px;
   display: flex;
   align-items: stretch;
   justify-content: center;
   box-sizing: border-box;
+}
+
+/* ================= PAGE 0: LIQUID TRACKPAD ================= */
+.liquid-trackpad-card {
+  width: 100%;
+  height: 100%;
+  border-radius: 28px;
+  padding: 10px 18px 12px 18px;
+  background: var(--liquid-glass-card-bg);
+  border: 1.5px solid var(--liquid-glass-border);
+  box-shadow:
+    inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1.5px 2px 0 rgba(255, 20, 50, 0.35),
+    0 12px 28px rgba(0, 0, 0, 0.65);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.trackpad-glass-specular {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 35%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.03) 40%, transparent 100%);
+  border-radius: 26px 26px 0 0;
+  pointer-events: none;
+}
+
+.trackpad-hud-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 32px;
+  padding: 0 2px;
+  margin-bottom: 6px;
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+.trackpad-hud-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 4px 12px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.hud-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ff2a55;
+  box-shadow: 0 0 6px #ff2a55;
+}
+
+.trackpad-hud-hints {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gesture-chip {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(0, 0, 0, 0.3);
+  padding: 3px 9px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.trackpad-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.trackpad-tool-btn svg { width: 14px; height: 14px; }
+.trackpad-tool-btn.active {
+  background: #ff2a55;
+  border-color: #ff5270;
+  box-shadow: 0 0 10px rgba(255, 42, 85, 0.6);
+}
+
+/* Glass Trackpad Surface */
+.trackpad-touch-surface {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1.2px solid rgba(255, 120, 140, 0.25);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
+  position: relative;
+  touch-action: none;
+  cursor: crosshair;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.trackpad-touch-surface:active {
+  border-color: rgba(255, 120, 140, 0.55);
+}
+
+.trackpad-center-mark {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.22);
+  font-size: 13px;
+  font-weight: 600;
+  pointer-events: none;
+  user-select: none;
+}
+
+.trackpad-center-mark svg { width: 18px; height: 18px; }
+
+.trackpad-reticle {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 42, 85, 0.8);
+  background: radial-gradient(circle, rgba(255, 42, 85, 0.35) 0%, transparent 70%);
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0.6);
+  opacity: 0;
+  transition: opacity 0.15s ease, transform 0.1s ease;
+}
+
+.trackpad-reticle.active {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+/* Bottom Click Zones */
+.trackpad-click-row {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  margin-top: 8px;
+  gap: 8px;
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+.trackpad-click-pad {
+  flex: 1;
+  height: 100%;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  outline: none;
+  transition: transform 0.08s ease, background 0.08s ease;
+}
+
+.trackpad-click-pad:active {
+  transform: scale(0.97);
+  background: rgba(255, 42, 85, 0.35);
+  border-color: #ff2a55;
+}
+
+.trackpad-pad-divider {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.15);
 }
 
 /* ================= PAGE 1: LIQUID MEDIA DECK CARD ================= */

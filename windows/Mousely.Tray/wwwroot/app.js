@@ -24,12 +24,33 @@
   let lastTrackKey = '';
   let discoveredServers = new Map();
 
-  // Gesture State
-  let touchStartX = 0;
-  let touchStartY = 0;
-  let touchDiffX = 0;
-  let touchDiffY = 0;
-  let isSwiping = false;
+  // Trackpad Engine State
+  let isDragLock = false;
+  let trackpadTouchCount = 0;
+  let trackpadStartTime = 0;
+
+  // 1-Finger Pointer Tracking
+  let t1StartX = 0;
+  let t1StartY = 0;
+  let t1LastX = 0;
+  let t1LastY = 0;
+  let t1Moved = false;
+
+  // 2-Finger Scroll & Secondary Click
+  let t2StartX = 0;
+  let t2StartY = 0;
+  let t2LastX = 0;
+  let t2LastY = 0;
+  let t2ScrollAccumY = 0;
+  let t2ScrollAccumX = 0;
+  let t2TapCandidate = false;
+
+  // 3-Finger Gesture Tracking
+  let t3StartX = 0;
+  let t3StartY = 0;
+  let t3LastX = 0;
+  let t3LastY = 0;
+  let t3GestureTriggered = false;
 
   // DOM Elements
   const appleToast = document.getElementById('appleToast');
@@ -40,7 +61,6 @@
   const statusDeviceName = document.getElementById('statusDeviceName');
   const navTabs = document.getElementById('navTabs');
   const carouselTrack = document.getElementById('carouselTrack');
-  const carouselViewport = document.getElementById('carouselViewport');
   const carouselDots = document.getElementById('carouselDots');
 
   const albumArtImg = document.getElementById('albumArtImg');
@@ -70,6 +90,10 @@
   const desktopLaunchOverlay = document.getElementById('desktopLaunchOverlay');
   const desktopDevicesList = document.getElementById('desktopDevicesList');
   const manualIpInput = document.getElementById('manualIpInput');
+
+  const trackpadGestureLabel = document.getElementById('trackpadGestureLabel');
+  const btnDragLock = document.getElementById('btnDragLock');
+  const dragLockLabel = document.getElementById('dragLockLabel');
 
   // ================= HAPTIC & TOAST NOTIFICATION =================
   function triggerHaptic(style = 'light') {
@@ -101,12 +125,12 @@
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   }
 
-  // ================= 1. CAROUSEL & SWIPE NAVIGATION =================
+  // ================= 1. PAGE NAVIGATION (4 PAGES - NO SWIPE) =================
   window.switchPage = function(pageIndex) {
-    if (pageIndex < 0 || pageIndex > 2) return;
+    if (pageIndex < 0 || pageIndex > 3) return;
     currentPage = pageIndex;
 
-    const offsetPercent = pageIndex * 33.333333;
+    const offsetPercent = pageIndex * 25;
     if (carouselTrack) {
       carouselTrack.style.transform = `translate3d(-${offsetPercent}%, 0, 0)`;
     }
@@ -128,45 +152,243 @@
     triggerHaptic('light');
   };
 
-  function setupSwipeNavigation() {
-    if (!carouselViewport) return;
+  // ================= 2. APPLE MAGIC TRACKPAD ENGINE =================
+  function updateTrackpadLabel(text) {
+    if (trackpadGestureLabel) trackpadGestureLabel.textContent = text;
+  }
 
-    carouselViewport.addEventListener('touchstart', (e) => {
-      if (e.touches.length >= 1) {
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-        touchDiffX = 0;
-        touchDiffY = 0;
-        isSwiping = true;
-      }
-    }, { passive: true });
+  window.trackpadLeftClick = function() {
+    triggerHaptic('medium');
+    sendCommand('left_click');
+    updateTrackpadLabel('Primary Click (Left)');
+  };
 
-    carouselViewport.addEventListener('touchmove', (e) => {
-      if (!isSwiping || isDraggingVolume || isScrubbingWaveform) return;
-      const currentX = e.touches[0].clientX;
-      const currentY = e.touches[0].clientY;
-      touchDiffX = currentX - touchStartX;
-      touchDiffY = currentY - touchStartY;
-    }, { passive: true });
+  window.trackpadRightClick = function() {
+    triggerHaptic('medium');
+    sendCommand('right_click');
+    updateTrackpadLabel('Secondary Click (Right)');
+  };
 
-    carouselViewport.addEventListener('touchend', () => {
-      if (!isSwiping) return;
-      isSwiping = false;
+  window.toggleDragLock = function() {
+    isDragLock = !isDragLock;
+    if (btnDragLock) btnDragLock.classList.toggle('active', isDragLock);
+    if (dragLockLabel) dragLockLabel.textContent = isDragLock ? 'Drag: ON' : 'Drag: Off';
+    triggerHaptic('medium');
+    if (isDragLock) {
+      sendCommand('mouse_down', { button: 'left' });
+      showToast('Drag Lock Active (Holding Left Button)', '🔒');
+      updateTrackpadLabel('Drag Lock Active');
+    } else {
+      sendCommand('mouse_up', { button: 'left' });
+      showToast('Drag Lock Released', '🔓');
+      updateTrackpadLabel('1-Finger Pointer');
+    }
+  };
 
-      const swipeThreshold = 45;
-      if (Math.abs(touchDiffX) > swipeThreshold && Math.abs(touchDiffX) > Math.abs(touchDiffY) * 1.2) {
-        if (touchDiffX < 0) {
-          window.switchPage(Math.min(2, currentPage + 1));
-        } else {
-          window.switchPage(Math.max(0, currentPage - 1));
+  function setupMagicTrackpad() {
+    const surface = document.getElementById('trackpadTouchSurface');
+    const reticle = document.getElementById('trackpadReticle');
+    if (!surface) return;
+
+    surface.addEventListener('touchstart', (e) => {
+      trackpadTouchCount = e.touches.length;
+      trackpadStartTime = performance.now();
+
+      if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        const rect = surface.getBoundingClientRect();
+        t1StartX = touch.clientX;
+        t1StartY = touch.clientY;
+        t1LastX = touch.clientX;
+        t1LastY = touch.clientY;
+        t1Moved = false;
+
+        updateTrackpadLabel(isDragLock ? 'Dragging...' : '1-Finger Pointer');
+        if (reticle) {
+          reticle.style.left = `${touch.clientX - rect.left}px`;
+          reticle.style.top = `${touch.clientY - rect.top}px`;
+          reticle.classList.add('active');
         }
+      } else if (e.touches.length === 2) {
+        const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        t2StartX = mx;
+        t2StartY = my;
+        t2LastX = mx;
+        t2LastY = my;
+        t2ScrollAccumY = 0;
+        t2ScrollAccumX = 0;
+        t2TapCandidate = true;
+
+        updateTrackpadLabel('✌️ 2-Finger Scroll');
+        if (reticle) reticle.classList.remove('active');
+      } else if (e.touches.length === 3) {
+        const mx = (e.touches[0].clientX + e.touches[1].clientX + e.touches[2].clientX) / 3;
+        const my = (e.touches[0].clientY + e.touches[1].clientY + e.touches[2].clientY) / 3;
+        t3StartX = mx;
+        t3StartY = my;
+        t3LastX = mx;
+        t3LastY = my;
+        t3GestureTriggered = false;
+
+        updateTrackpadLabel('🪟 3-Finger Gesture');
+        if (reticle) reticle.classList.remove('active');
       }
-      touchDiffX = 0;
-      touchDiffY = 0;
+    }, { passive: false });
+
+    surface.addEventListener('touchmove', (e) => {
+      e.preventDefault(); // Prevent any default page gestures
+
+      if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        const cx = touch.clientX;
+        const cy = touch.clientY;
+        const dx = cx - t1LastX;
+        const dy = cy - t1LastY;
+
+        if (Math.hypot(cx - t1StartX, cy - t1StartY) > 4) {
+          t1Moved = true;
+        }
+
+        // Apple Mac cursor ballistics curve
+        const speed = Math.hypot(dx, dy);
+        let accel = 1.25;
+        if (speed > 16) accel = 2.6;
+        else if (speed > 8) accel = 1.9;
+        else if (speed > 3) accel = 1.45;
+
+        const moveX = Math.round(dx * accel);
+        const moveY = Math.round(dy * accel);
+
+        if (moveX !== 0 || moveY !== 0) {
+          sendCommand('mouse_move', { dx: moveX, dy: moveY });
+        }
+
+        t1LastX = cx;
+        t1LastY = cy;
+
+        if (reticle) {
+          const rect = surface.getBoundingClientRect();
+          reticle.style.left = `${cx - rect.left}px`;
+          reticle.style.top = `${cy - rect.top}px`;
+        }
+      } else if (e.touches.length === 2) {
+        const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        const deltaX = mx - t2LastX;
+        const deltaY = my - t2LastY;
+
+        if (Math.hypot(mx - t2StartX, my - t2StartY) > 6) {
+          t2TapCandidate = false;
+        }
+
+        t2ScrollAccumX += deltaX;
+        t2ScrollAccumY += deltaY;
+
+        // Discretized scroll notch with iPhone Taptic feedback
+        const NOTCH_THRESHOLD = 8;
+        if (Math.abs(t2ScrollAccumY) >= NOTCH_THRESHOLD || Math.abs(t2ScrollAccumX) >= NOTCH_THRESHOLD) {
+          // Invert deltaY for natural macOS-style scrolling
+          const scrollStepY = Math.round((t2ScrollAccumY / NOTCH_THRESHOLD) * 120);
+          const scrollStepX = Math.round((t2ScrollAccumX / NOTCH_THRESHOLD) * 120);
+
+          sendCommand('scroll', { deltaY: scrollStepY, deltaX: scrollStepX });
+
+          // "if input is 2 fingers then it will be considered scroll either horzontal or vertical, this must trigger the haptic engine on the phone as well"
+          triggerHaptic('light');
+
+          t2ScrollAccumY %= NOTCH_THRESHOLD;
+          t2ScrollAccumX %= NOTCH_THRESHOLD;
+        }
+
+        t2LastX = mx;
+        t2LastY = my;
+      } else if (e.touches.length === 3 && !t3GestureTriggered) {
+        const mx = (e.touches[0].clientX + e.touches[1].clientX + e.touches[2].clientX) / 3;
+        const my = (e.touches[0].clientY + e.touches[1].clientY + e.touches[2].clientY) / 3;
+        const diffX = mx - t3StartX;
+        const diffY = my - t3StartY;
+
+        if (Math.abs(diffY) > 45 && Math.abs(diffY) > Math.abs(diffX) * 1.3) {
+          t3GestureTriggered = true;
+          if (diffY < 0) {
+            // Swipe Up -> Task View / Mission Control (Win + Tab)
+            triggerHaptic('medium');
+            sendCommand('trackpad_gesture', { type: 'task_view' });
+            showToast('Task View (Win + Tab)', '🪟');
+            updateTrackpadLabel('Task View');
+          } else {
+            // Swipe Down -> Show Desktop (Win + D)
+            triggerHaptic('medium');
+            sendCommand('trackpad_gesture', { type: 'show_desktop' });
+            showToast('Show Desktop (Win + D)', '🖥️');
+            updateTrackpadLabel('Show Desktop');
+          }
+        } else if (Math.abs(diffX) > 45 && Math.abs(diffX) > Math.abs(diffY) * 1.3) {
+          t3GestureTriggered = true;
+          if (diffX < 0) {
+            // Swipe Left -> Previous Desktop (Ctrl + Win + Left)
+            triggerHaptic('medium');
+            sendCommand('trackpad_gesture', { type: 'desktop_left' });
+            showToast('Previous Desktop', '◀️');
+            updateTrackpadLabel('Previous Desktop');
+          } else {
+            // Swipe Right -> Next Desktop (Ctrl + Win + Right)
+            triggerHaptic('medium');
+            sendCommand('trackpad_gesture', { type: 'desktop_right' });
+            showToast('Next Desktop', '▶️');
+            updateTrackpadLabel('Next Desktop');
+          }
+        }
+
+        t3LastX = mx;
+        t3LastY = my;
+      }
+    }, { passive: false });
+
+    surface.addEventListener('touchend', (e) => {
+      const elapsed = performance.now() - trackpadStartTime;
+
+      if (e.touches.length === 0) {
+        if (reticle) reticle.classList.remove('active');
+
+        if (trackpadTouchCount === 1) {
+          // 1-Finger Tap -> Left Click
+          if (!t1Moved && elapsed < 250) {
+            triggerHaptic('medium');
+            sendCommand('left_click');
+            updateTrackpadLabel('Left Click');
+          } else {
+            updateTrackpadLabel('1-Finger Pointer');
+          }
+        } else if (trackpadTouchCount === 2) {
+          // 2-Finger Tap -> Secondary Click (Right Click)
+          if (t2TapCandidate && elapsed < 260) {
+            triggerHaptic('medium');
+            sendCommand('right_click');
+            showToast('Right Click (2-Finger Tap)', '⚡');
+            updateTrackpadLabel('Right Click');
+          } else {
+            updateTrackpadLabel('1-Finger Pointer');
+          }
+        } else {
+          updateTrackpadLabel('1-Finger Pointer');
+        }
+
+        trackpadTouchCount = 0;
+      } else {
+        trackpadTouchCount = e.touches.length;
+      }
+    }, { passive: true });
+
+    surface.addEventListener('touchcancel', () => {
+      if (reticle) reticle.classList.remove('active');
+      trackpadTouchCount = 0;
+      updateTrackpadLabel('1-Finger Pointer');
     }, { passive: true });
   }
 
-  // ================= 2. DESKTOP SELECTOR OVERLAY =================
+  // ================= 3. DESKTOP SELECTOR OVERLAY =================
   window.showDesktopSelector = function() {
     triggerHaptic('light');
     if (desktopLaunchOverlay) {
@@ -198,7 +420,7 @@
     connectWebSocket(ip);
   };
 
-  // ================= 3. MEDIA CONTROLS & TRANSPORT =================
+  // ================= 4. MEDIA CONTROLS & TRANSPORT =================
   window.togglePlayPause = function() {
     isPlaying = !isPlaying;
     if (playIcon) playIcon.style.display = isPlaying ? 'none' : 'block';
@@ -250,7 +472,7 @@
     sendCommand('mute');
   };
 
-  // ================= 4. APP LAUNCHER & QUICK ACTIONS =================
+  // ================= 5. APP LAUNCHER & QUICK ACTIONS =================
   window.launchApp = function(slot, name) {
     triggerHaptic('medium');
     showToast(`Launching ${name}...`, '🚀');
@@ -277,7 +499,7 @@
     sendCommand('clipboard_action', { type: type });
   };
 
-  // ================= 5. NATIVE SWIFT BRIDGE CALLBACKS =================
+  // ================= 6. NATIVE SWIFT BRIDGE CALLBACKS =================
   window.onServerDiscovered = function(server) {
     if (typeof server === 'string') {
       try { server = JSON.parse(server); } catch (e) {}
@@ -307,7 +529,7 @@
     sendCommand('set_volume', { value: val });
   };
 
-  // ================= 6. CSS CLIP WAVEFORM SCRUBBER =================
+  // ================= 7. CSS CLIP WAVEFORM SCRUBBER =================
   function initWaveformBars() {
     if (!waveformBarsBase || !waveformBarsActive) return;
     const count = 56;
@@ -387,7 +609,7 @@
     }
   }, 400);
 
-  // ================= 7. VOLUME SLIDER ENGINE =================
+  // ================= 8. VOLUME SLIDER ENGINE =================
   function updateVolumeUI(val, animate = true) {
     val = Math.max(0, Math.min(100, Math.round(val)));
     currentVolume = val;
@@ -455,7 +677,7 @@
     volumeTrack.addEventListener('pointercancel', finishVolume);
   }
 
-  // ================= 8. WEBSOCKET NETWORK CORE =================
+  // ================= 9. WEBSOCKET NETWORK CORE =================
   function sendCommand(action, params = {}) {
     if (!ws || ws.readyState !== WebSocket.OPEN) {
       if (serverHost) connectWebSocket(serverHost);
@@ -604,7 +826,7 @@
     }
   }
 
-  // ================= 9. AUTO-DISCOVERY & SUBNET PROBING =================
+  // ================= 10. AUTO-DISCOVERY & SUBNET PROBING =================
   function fetchWithTimeout(url, timeoutMs = 1200) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -684,9 +906,9 @@
     });
   }
 
-  // ================= 10. INITIALIZATION =================
+  // ================= 11. INITIALIZATION =================
   window.addEventListener('DOMContentLoaded', () => {
-    setupSwipeNavigation();
+    setupMagicTrackpad();
     initWaveformBars();
     setupWaveformEvents();
     setupVolumeEvents();

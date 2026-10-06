@@ -387,6 +387,45 @@ namespace Mousely.Tray.Server
                         else if (clipType == "screenshot") ShortcutManager.SendScreenshot();
                         await SendJsonAsync(ws, new { type = "action_ack", action = "clipboard_action", clipType = clipType, success = true }, token);
                         break;
+
+                    case "mouse_move":
+                        int dx = root.TryGetProperty("dx", out var dxProp) ? dxProp.GetInt32() : 0;
+                        int dy = root.TryGetProperty("dy", out var dyProp) ? dyProp.GetInt32() : 0;
+                        MouseInputManager.Move(dx, dy);
+                        break;
+
+                    case "left_click":
+                        MouseInputManager.LeftClick();
+                        break;
+
+                    case "right_click":
+                        MouseInputManager.RightClick();
+                        break;
+
+                    case "middle_click":
+                        MouseInputManager.MiddleClick();
+                        break;
+
+                    case "mouse_down":
+                        string btnDown = root.TryGetProperty("button", out var btnDownProp) ? btnDownProp.GetString() ?? "left" : "left";
+                        MouseInputManager.MouseDown(btnDown);
+                        break;
+
+                    case "mouse_up":
+                        string btnUp = root.TryGetProperty("button", out var btnUpProp) ? btnUpProp.GetString() ?? "left" : "left";
+                        MouseInputManager.MouseUp(btnUp);
+                        break;
+
+                    case "scroll":
+                        int deltaY = root.TryGetProperty("deltaY", out var sYProp) ? sYProp.GetInt32() : 0;
+                        int deltaX = root.TryGetProperty("deltaX", out var sXProp) ? sXProp.GetInt32() : 0;
+                        MouseInputManager.Scroll(deltaY, deltaX);
+                        break;
+
+                    case "trackpad_gesture":
+                        string gestureType = root.TryGetProperty("type", out var gTypeProp) ? gTypeProp.GetString() ?? "" : "";
+                        MouseInputManager.TriggerGesture(gestureType);
+                        break;
                 }
             }
             catch (Exception ex)
