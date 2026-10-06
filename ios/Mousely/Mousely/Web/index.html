@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <!-- ================= DYNAMIC CONTINUOUS FLUID BACKGROUND ================= -->
+  <!-- ================= CONTINUOUS DYNAMIC FLUID BACKGROUND ================= -->
   <canvas id="fluidBgCanvas" class="fluid-bg-canvas"></canvas>
 
   <!-- Dynamic Island Notification Toast -->
@@ -19,312 +19,47 @@
     <span class="island-text" id="toastText">Connected</span>
   </div>
 
-  <!-- Master Liquid Glass Landscape Root -->
-  <main class="deck-landscape-root">
+  <!-- Master App Container -->
+  <div class="app-landscape-root">
     
-    <!-- Top Deck: Left Pills | Center Media Card | Right Pills -->
-    <div class="deck-main-row">
-      
-      <!-- ================= LEFT COLUMN: SHORTCUTS 1-4 ================= -->
-      <aside class="deck-column deck-column-left">
-        <!-- Pill 1: Cut (Ctrl + X) -->
-        <button class="glass-pill-btn" onclick="triggerPillAction('cut')">
-          <div class="pill-left-content">
-            <svg class="pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="6" cy="6" r="3"></circle>
-              <circle cx="6" cy="18" r="3"></circle>
-              <line x1="20" y1="4" x2="8.12" y2="15.88"></line>
-              <line x1="14.47" y1="14.48" x2="20" y2="20"></line>
-              <line x1="8.12" y1="8.12" x2="12" y2="12"></line>
-            </svg>
-            <div class="pill-text-group">
-              <span class="pill-title">Cut</span>
-              <span class="pill-sub">Ctrl + X</span>
-            </div>
-          </div>
-          <span class="pill-badge">1</span>
-        </button>
-
-        <!-- Pill 2: Copy (Ctrl + C) -->
-        <button class="glass-pill-btn" onclick="triggerPillAction('copy')">
-          <div class="pill-left-content">
-            <svg class="pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-            </svg>
-            <div class="pill-text-group">
-              <span class="pill-title">Copy</span>
-              <span class="pill-sub">Ctrl + C</span>
-            </div>
-          </div>
-          <span class="pill-badge">2</span>
-        </button>
-
-        <!-- Pill 3: Paste (Ctrl + V) -->
-        <button class="glass-pill-btn" onclick="triggerPillAction('paste')">
-          <div class="pill-left-content">
-            <svg class="pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-              <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
-            </svg>
-            <div class="pill-text-group">
-              <span class="pill-title">Paste</span>
-              <span class="pill-sub">Ctrl + V</span>
-            </div>
-          </div>
-          <span class="pill-badge">3</span>
-        </button>
-
-        <!-- Pill 4: Undo (Ctrl + Z) -->
-        <button class="glass-pill-btn" onclick="triggerPillAction('undo')">
-          <div class="pill-left-content">
-            <svg class="pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M9 14 4 9l5-5"></path>
-              <path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"></path>
-            </svg>
-            <div class="pill-text-group">
-              <span class="pill-title">Undo</span>
-              <span class="pill-sub">Ctrl + Z</span>
-            </div>
-          </div>
-          <span class="pill-badge">4</span>
-        </button>
-      </aside>
-
-      <!-- ================= CENTER COLUMN: LIQUID GLASS MEDIA CARD ================= -->
-      <section class="deck-media-card" id="deckMediaCard">
-        <!-- Specular liquid glass curved sheen -->
-        <div class="glass-specular-highlight"></div>
-
-        <!-- Top Section: Art + Meta + More Button -->
-        <div class="card-top-row">
-          <div class="card-art-wrap" id="artworkContainer">
-            <img id="albumArtImg" class="card-art-img" src="assets/default-art.svg" alt="Album Art" onerror="this.src='assets/default-art.svg'">
-            <div class="art-gloss-layer"></div>
-          </div>
-
-          <div class="card-meta-wrap">
-            <div class="now-playing-pill">
-              <span class="live-wave-icon">
-                <span class="wave-stem stem-1"></span>
-                <span class="wave-stem stem-2"></span>
-                <span class="wave-stem stem-3"></span>
-                <span class="wave-stem stem-4"></span>
-              </span>
-              <span class="now-playing-text">Now Playing</span>
-            </div>
-
-            <h1 class="card-track-title" id="trackTitle">Reborn</h1>
-            <div class="card-track-artist" id="trackArtist">Koven</div>
-
-            <div class="card-quality-badge">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
-              </svg>
-              <span>Lossless</span>
-            </div>
-          </div>
-
-          <button class="card-more-btn" id="btnMore" onclick="toggleMoreMenu()" title="More Actions">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <circle cx="5" cy="12" r="2.2"></circle>
-              <circle cx="12" cy="12" r="2.2"></circle>
-              <circle cx="19" cy="12" r="2.2"></circle>
-            </svg>
-          </button>
-        </div>
-
-        <!-- Middle Section: Dynamic Waveform Scrubber -->
-        <div class="card-waveform-section">
-          <div class="waveform-scrubber-wrap" id="waveformBar">
-            <canvas id="waveformCanvas" class="waveform-canvas"></canvas>
-            <div class="waveform-needle" id="waveformNeedle">
-              <div class="needle-bead"></div>
-            </div>
-          </div>
-          <div class="waveform-timestamps">
-            <span class="time-readout" id="timeElapsed">1:37</span>
-            <span class="time-readout" id="timeTotal">4:32</span>
-          </div>
-        </div>
-
-        <!-- Bottom Section: Transport Controls Row -->
-        <div class="card-controls-row">
-          <!-- Shuffle Button -->
-          <button class="btn-transport" id="btnShuffle" onclick="toggleShuffle()" title="Shuffle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="16 3 21 3 21 8"></polyline>
-              <line x1="4" y1="20" x2="21" y2="3"></line>
-              <polyline points="21 16 21 21 16 21"></polyline>
-              <line x1="15" y1="15" x2="21" y2="21"></line>
-              <line x1="4" y1="4" x2="9" y2="9"></line>
-            </svg>
-          </button>
-
-          <!-- Prev Button -->
-          <button class="btn-transport" id="btnPrev" title="Previous Track">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <polygon points="19 20 9 12 19 4 19 20"></polygon>
-              <rect x="5" y="4" width="2.5" height="16" rx="1"></rect>
-            </svg>
-          </button>
-
-          <!-- Center Large Ruby Liquid Glass Play/Pause Pill -->
-          <button class="btn-play-capsule" id="btnPlayPause" title="Play / Pause">
-            <div class="capsule-specular"></div>
-            <svg id="playIcon" viewBox="0 0 24 24" fill="currentColor">
-              <polygon points="7 4 19 12 7 20 7 4"></polygon>
-            </svg>
-            <svg id="pauseIcon" viewBox="0 0 24 24" fill="currentColor" style="display: none;">
-              <rect x="6" y="4" width="3.5" height="16" rx="1.5"></rect>
-              <rect x="14.5" y="4" width="3.5" height="16" rx="1.5"></rect>
-            </svg>
-          </button>
-
-          <!-- Next Button -->
-          <button class="btn-transport" id="btnNext" title="Next Track">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-              <polygon points="5 4 15 12 5 20 5 4"></polygon>
-              <rect x="16.5" y="4" width="2.5" height="16" rx="1"></rect>
-            </svg>
-          </button>
-
-          <!-- Repeat Button -->
-          <button class="btn-transport" id="btnRepeat" onclick="toggleRepeat()" title="Repeat">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="17 1 21 5 17 9"></polyline>
-              <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
-              <polyline points="7 23 3 19 7 15"></polyline>
-              <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
-            </svg>
-          </button>
-        </div>
-
-      </section>
-
-      <!-- ================= RIGHT COLUMN: SHORTCUTS 5-8 ================= -->
-      <aside class="deck-column deck-column-right">
-        <!-- Pill 5: Delete (Del) -->
-        <button class="glass-pill-btn" onclick="triggerPillAction('delete')">
-          <div class="pill-left-content">
-            <svg class="pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="3 6 5 6 21 6"></polyline>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-              <line x1="10" y1="11" x2="10" y2="17"></line>
-              <line x1="14" y1="11" x2="14" y2="17"></line>
-            </svg>
-            <div class="pill-text-group">
-              <span class="pill-title">Delete</span>
-              <span class="pill-sub">Del</span>
-            </div>
-          </div>
-          <span class="pill-badge">5</span>
-        </button>
-
-        <!-- Pill 6: Select All (Ctrl + A) -->
-        <button class="glass-pill-btn" onclick="triggerPillAction('select_all')">
-          <div class="pill-left-content">
-            <svg class="pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4 8V6a2 2 0 0 1 2-2h2"></path>
-              <path d="M4 16v2a2 2 0 0 0 2 2h2"></path>
-              <path d="M16 4h2a2 2 0 0 1 2 2v2"></path>
-              <path d="M16 20h2a2 2 0 0 0 2-2v-2"></path>
-              <rect x="9" y="9" width="6" height="6" stroke-dasharray="2 2"></rect>
-            </svg>
-            <div class="pill-text-group">
-              <span class="pill-title">Select All</span>
-              <span class="pill-sub">Ctrl + A</span>
-            </div>
-          </div>
-          <span class="pill-badge">6</span>
-        </button>
-
-        <!-- Pill 7: Find (Ctrl + F) -->
-        <button class="glass-pill-btn" onclick="triggerPillAction('find')">
-          <div class="pill-left-content">
-            <svg class="pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="7"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <div class="pill-text-group">
-              <span class="pill-title">Find</span>
-              <span class="pill-sub">Ctrl + F</span>
-            </div>
-          </div>
-          <span class="pill-badge">7</span>
-        </button>
-
-        <!-- Pill 8: Save (Ctrl + S) -->
-        <button class="glass-pill-btn" onclick="triggerPillAction('save')">
-          <div class="pill-left-content">
-            <svg class="pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-              <polyline points="17 21 17 13 7 13 7 21"></polyline>
-              <polyline points="7 3 7 8 15 8"></polyline>
-            </svg>
-            <div class="pill-text-group">
-              <span class="pill-title">Save</span>
-              <span class="pill-sub">Ctrl + S</span>
-            </div>
-          </div>
-          <span class="pill-badge">8</span>
-        </button>
-      </aside>
-
-    </div>
-
-    <!-- ================= BOTTOM ROW: UNIFIED GLASS CAPSULE BAR ================= -->
-    <footer class="bottom-glass-bar">
-      <!-- Section 1: Volume Slider with 3D Ruby Orb -->
-      <div class="bar-section-volume">
-        <button class="bar-vol-btn" id="btnMuteToggle" onclick="toggleMute()" title="Mute / Unmute">
-          <svg id="volIcon" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
-          </svg>
-          <svg id="muteIcon" viewBox="0 0 24 24" fill="currentColor" style="display: none;">
-            <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
-          </svg>
-        </button>
-
-        <div class="vol-track-container" id="volumeTrack">
-          <div class="vol-track-fill" id="volumeFill">
-            <div class="vol-thumb-ball"></div>
-          </div>
-        </div>
-
-        <span class="vol-percentage" id="volumeBadge">75%</span>
-      </div>
-
-      <!-- Glass Divider -->
-      <div class="bar-divider"></div>
-
-      <!-- Section 2: Heart / Favorite Button -->
-      <button class="bar-action-btn" id="btnHeart" onclick="toggleFavorite()" title="Like Track">
-        <svg id="heartIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-        </svg>
+    <!-- Top Liquid Glass Navigation Header -->
+    <header class="top-glass-header">
+      <!-- Left: Connection Status Pill -->
+      <button class="status-glass-pill" id="statusPill" onclick="showDesktopSelector()" title="Desktop Connection">
+        <span class="status-glow-dot" id="statusDot"></span>
+        <span class="status-name" id="statusDeviceName">Select Desktop</span>
       </button>
 
-      <!-- Glass Divider -->
-      <div class="bar-divider"></div>
+      <!-- Center: Liquid Glass Segmented Page Switcher -->
+      <nav class="nav-segmented-glass" id="navTabs">
+        <button class="nav-glass-tab active" data-page="0" onclick="switchPage(0)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 18V5l12-2v13"></path>
+            <circle cx="6" cy="18" r="3"></circle>
+            <circle cx="18" cy="16" r="3"></circle>
+          </svg>
+          <span>Media</span>
+        </button>
+        <button class="nav-glass-tab" data-page="1" onclick="switchPage(1)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+          </svg>
+          <span>Apps (8)</span>
+        </button>
+        <button class="nav-glass-tab" data-page="2" onclick="switchPage(2)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+          </svg>
+          <span>Actions</span>
+        </button>
+      </nav>
 
-      <!-- Section 3: Playlist / Mission Control App Launcher Button -->
-      <button class="bar-action-btn" id="btnPlaylist" onclick="toggleMissionControl()" title="Mission Control (8 Apps)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="8" y1="6" x2="21" y2="6"></line>
-          <line x1="8" y1="12" x2="21" y2="12"></line>
-          <line x1="8" y1="18" x2="21" y2="18"></line>
-          <circle cx="4" cy="6" r="1.5" fill="currentColor"></circle>
-          <circle cx="4" cy="12" r="1.5" fill="currentColor"></circle>
-          <circle cx="4" cy="18" r="1.5" fill="currentColor"></circle>
-        </svg>
-      </button>
-
-      <!-- Glass Divider -->
-      <div class="bar-divider"></div>
-
-      <!-- Section 4: Equalizer / Settings & Desktop Selector Button -->
-      <button class="bar-action-btn" id="btnEqualizer" onclick="showDesktopSelector()" title="Desktop Connection">
+      <!-- Right: Settings / Discovered PCs Button -->
+      <button class="header-glass-icon-btn" onclick="showDesktopSelector()" title="Scan Devices">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="4" y1="21" x2="4" y2="14"></line>
           <line x1="4" y1="10" x2="4" y2="3"></line>
@@ -337,105 +72,364 @@
           <line x1="17" y1="16" x2="23" y2="16"></line>
         </svg>
       </button>
+    </header>
+
+    <!-- Main Viewport Carousel (3 Pages) -->
+    <div class="carousel-viewport" id="carouselViewport">
+      <div class="carousel-slider-track" id="carouselTrack">
+        
+        <!-- =========================================================================
+             PAGE 1: MEDIA CONTROL (Center Player + Waveform + Ruby Capsule + Volume)
+             ========================================================================= -->
+        <section class="carousel-page-pane page-media" id="pageMedia">
+          <div class="liquid-media-deck-card">
+            <div class="glass-specular-highlight"></div>
+
+            <!-- Left Deck: Artwork + Live Track Info + Quality Badge -->
+            <div class="media-deck-left">
+              <div class="media-art-frame" id="artworkContainer">
+                <img id="albumArtImg" class="media-art-img" src="assets/default-art.svg" alt="Album Art" onerror="this.src='assets/default-art.svg'">
+                <div class="art-specular-gloss"></div>
+              </div>
+
+              <div class="media-meta-group">
+                <div class="now-playing-pill">
+                  <span class="live-wave-icon">
+                    <span class="wave-stem stem-1"></span>
+                    <span class="wave-stem stem-2"></span>
+                    <span class="wave-stem stem-3"></span>
+                    <span class="wave-stem stem-4"></span>
+                  </span>
+                  <span>Now Playing</span>
+                </div>
+
+                <h1 class="media-track-title" id="trackTitle">Reborn</h1>
+                <div class="media-track-artist" id="trackArtist">Koven</div>
+
+                <div class="media-badge-row">
+                  <div class="media-quality-badge">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
+                    </svg>
+                    <span>Lossless</span>
+                  </div>
+
+                  <button class="media-favorite-btn" id="btnHeart" onclick="toggleFavorite()" title="Like Track">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Deck: Scrubber + Big Ruby Capsule Play/Pause + Volume Rail -->
+            <div class="media-deck-right">
+              
+              <!-- Dynamic Waveform Audio Scrubber -->
+              <div class="media-waveform-block">
+                <div class="waveform-scrubber-wrap" id="waveformBar">
+                  <canvas id="waveformCanvas" class="waveform-canvas"></canvas>
+                  <div class="waveform-needle" id="waveformNeedle">
+                    <div class="needle-bead"></div>
+                  </div>
+                </div>
+                <div class="waveform-time-row">
+                  <span class="time-readout" id="timeElapsed">1:37</span>
+                  <span class="time-readout" id="timeTotal">4:32</span>
+                </div>
+              </div>
+
+              <!-- Transport Controls Row -->
+              <div class="media-controls-row">
+                <button class="btn-transport" id="btnShuffle" onclick="toggleShuffle()" title="Shuffle">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="16 3 21 3 21 8"></polyline>
+                    <line x1="4" y1="20" x2="21" y2="3"></line>
+                    <polyline points="21 16 21 21 16 21"></polyline>
+                    <line x1="15" y1="15" x2="21" y2="21"></line>
+                    <line x1="4" y1="4" x2="9" y2="9"></line>
+                  </svg>
+                </button>
+
+                <button class="btn-transport" id="btnPrev" title="Previous Track">
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="19 20 9 12 19 4 19 20"></polygon>
+                    <rect x="5" y="4" width="2.5" height="16" rx="1"></rect>
+                  </svg>
+                </button>
+
+                <!-- Signature Large Ruby Liquid Glass Play/Pause Capsule -->
+                <button class="btn-play-capsule" id="btnPlayPause" title="Play / Pause">
+                  <div class="capsule-specular"></div>
+                  <svg id="playIcon" viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="7 4 19 12 7 20 7 4"></polygon>
+                  </svg>
+                  <svg id="pauseIcon" viewBox="0 0 24 24" fill="currentColor" style="display: none;">
+                    <rect x="6" y="4" width="3.5" height="16" rx="1.5"></rect>
+                    <rect x="14.5" y="4" width="3.5" height="16" rx="1.5"></rect>
+                  </svg>
+                </button>
+
+                <button class="btn-transport" id="btnNext" title="Next Track">
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="5 4 15 12 5 20 5 4"></polygon>
+                    <rect x="16.5" y="4" width="2.5" height="16" rx="1"></rect>
+                  </svg>
+                </button>
+
+                <button class="btn-transport" id="btnRepeat" onclick="toggleRepeat()" title="Repeat">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="17 1 21 5 17 9"></polyline>
+                    <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+                    <polyline points="7 23 3 19 7 15"></polyline>
+                    <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Volume Synchronization Bar with 3D Ruby Metallic Orb -->
+              <div class="media-volume-strip">
+                <button class="vol-icon-btn" id="btnMuteToggle" onclick="toggleMute()" title="Mute / Unmute">
+                  <svg id="volIcon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                  </svg>
+                  <svg id="muteIcon" viewBox="0 0 24 24" fill="currentColor" style="display: none;">
+                    <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
+                  </svg>
+                </button>
+
+                <div class="vol-track-container" id="volumeTrack">
+                  <div class="vol-track-fill" id="volumeFill">
+                    <div class="vol-thumb-ball"></div>
+                  </div>
+                </div>
+
+                <span class="vol-percentage" id="volumeBadge">75%</span>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        <!-- =========================================================================
+             PAGE 2: MISSION CONTROL (8 Liquid Glass Blocks to Launch PC Applications)
+             ========================================================================= -->
+        <section class="carousel-page-pane page-mission" id="pageMission">
+          <div class="mission-grid-8">
+            
+            <!-- Block 1: Browser -->
+            <button class="liquid-pill-block" onclick="launchApp(1, 'Browser')">
+              <div class="pill-left-content">
+                <svg class="pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="2" y1="12" x2="22" y2="12"></line>
+                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                </svg>
+                <div class="pill-text-group">
+                  <span class="pill-title">Browser</span>
+                  <span class="pill-sub">Default Web</span>
+                </div>
+              </div>
+              <span class="pill-badge">1</span>
+            </button>
+
+            <!-- Block 2: Spotify -->
+            <button class="liquid-pill-block" onclick="launchApp(2, 'Spotify')">
+              <div class="pill-left-content">
+                <svg class="pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <path d="M8 11.5c3.5-1 7.5-.5 10.5 1"></path>
+                  <path d="M7 14.5c3-.8 6.5-.4 9.5.8"></path>
+                  <path d="M9 8.5c4-1.2 9-.8 12.5 1"></path>
+                </svg>
+                <div class="pill-text-group">
+                  <span class="pill-title">Spotify</span>
+                  <span class="pill-sub">Music Stream</span>
+                </div>
+              </div>
+              <span class="pill-badge">2</span>
+            </button>
+
+            <!-- Block 3: File Explorer -->
+            <button class="liquid-pill-block" onclick="launchApp(3, 'Explorer')">
+              <div class="pill-left-content">
+                <svg class="pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                </svg>
+                <div class="pill-text-group">
+                  <span class="pill-title">Explorer</span>
+                  <span class="pill-sub">Files & Folders</span>
+                </div>
+              </div>
+              <span class="pill-badge">3</span>
+            </button>
+
+            <!-- Block 4: Task Manager -->
+            <button class="liquid-pill-block" onclick="launchApp(4, 'Task Manager')">
+              <div class="pill-left-content">
+                <svg class="pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                </svg>
+                <div class="pill-text-group">
+                  <span class="pill-title">Task Mgr</span>
+                  <span class="pill-sub">Performance</span>
+                </div>
+              </div>
+              <span class="pill-badge">4</span>
+            </button>
+
+            <!-- Block 5: Terminal -->
+            <button class="liquid-pill-block" onclick="launchApp(5, 'Terminal')">
+              <div class="pill-left-content">
+                <svg class="pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <polyline points="4 17 10 11 4 5"></polyline>
+                  <line x1="12" y1="19" x2="20" y2="19"></line>
+                </svg>
+                <div class="pill-text-group">
+                  <span class="pill-title">Terminal</span>
+                  <span class="pill-sub">PowerShell</span>
+                </div>
+              </div>
+              <span class="pill-badge">5</span>
+            </button>
+
+            <!-- Block 6: Calculator -->
+            <button class="liquid-pill-block" onclick="launchApp(6, 'Calculator')">
+              <div class="pill-left-content">
+                <svg class="pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <rect x="4" y="2" width="16" height="20" rx="2"></rect>
+                  <line x1="8" y1="6" x2="16" y2="6"></line>
+                  <line x1="16" y1="14" x2="16" y2="18"></line>
+                  <line x1="8" y1="10" x2="8.01" y2="10"></line>
+                  <line x1="12" y1="10" x2="12.01" y2="10"></line>
+                  <line x1="16" y1="10" x2="16.01" y2="10"></line>
+                  <line x1="8" y1="14" x2="8.01" y2="14"></line>
+                  <line x1="12" y1="14" x2="12.01" y2="14"></line>
+                </svg>
+                <div class="pill-text-group">
+                  <span class="pill-title">Calculator</span>
+                  <span class="pill-sub">Math Utility</span>
+                </div>
+              </div>
+              <span class="pill-badge">6</span>
+            </button>
+
+            <!-- Block 7: Notepad -->
+            <button class="liquid-pill-block" onclick="launchApp(7, 'Notepad')">
+              <div class="pill-left-content">
+                <svg class="pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                </svg>
+                <div class="pill-text-group">
+                  <span class="pill-title">Notepad</span>
+                  <span class="pill-sub">Text Editor</span>
+                </div>
+              </div>
+              <span class="pill-badge">7</span>
+            </button>
+
+            <!-- Block 8: Windows Settings -->
+            <button class="liquid-pill-block" onclick="launchApp(8, 'Settings')">
+              <div class="pill-left-content">
+                <svg class="pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <circle cx="12" cy="12" r="3"></circle>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+                <div class="pill-text-group">
+                  <span class="pill-title">Settings</span>
+                  <span class="pill-sub">PC Config</span>
+                </div>
+              </div>
+              <span class="pill-badge">8</span>
+            </button>
+
+          </div>
+        </section>
+
+        <!-- =========================================================================
+             PAGE 3: QUICK ACTIONS (4 Liquid Glass Blocks: Ctrl+C, Ctrl+V, Win+V, Screenshot)
+             ========================================================================= -->
+        <section class="carousel-page-pane page-actions" id="pageActions">
+          <div class="actions-grid-4">
+            
+            <!-- Action 1: Ctrl + C (Copy) -->
+            <button class="liquid-action-card" onclick="triggerPillAction('copy')">
+              <div class="card-icon-halo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+              </div>
+              <div class="card-text-block">
+                <span class="card-main-title">Copy</span>
+                <span class="card-shortcut-tag">Ctrl + C</span>
+              </div>
+              <div class="card-badge-disc">1</div>
+            </button>
+
+            <!-- Action 2: Ctrl + V (Paste) -->
+            <button class="liquid-action-card" onclick="triggerPillAction('paste')">
+              <div class="card-icon-halo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                  <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                </svg>
+              </div>
+              <div class="card-text-block">
+                <span class="card-main-title">Paste</span>
+                <span class="card-shortcut-tag">Ctrl + V</span>
+              </div>
+              <div class="card-badge-disc">2</div>
+            </button>
+
+            <!-- Action 3: Win + V (Clipboard History) -->
+            <button class="liquid-action-card" onclick="triggerPillAction('history')">
+              <div class="card-icon-halo">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.551H10.949M0 12.6h9.75V22.05L0 20.7m10.949-8.1H24V24l-13.051-1.802"/>
+                </svg>
+              </div>
+              <div class="card-text-block">
+                <span class="card-main-title">Clipboard History</span>
+                <span class="card-shortcut-tag">Win + V</span>
+              </div>
+              <div class="card-badge-disc">3</div>
+            </button>
+
+            <!-- Action 4: Win + Shift + S (Screenshot) -->
+            <button class="liquid-action-card" onclick="triggerPillAction('screenshot')">
+              <div class="card-icon-halo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                  <circle cx="12" cy="13" r="4"></circle>
+                </svg>
+              </div>
+              <div class="card-text-block">
+                <span class="card-main-title">Screenshot</span>
+                <span class="card-shortcut-tag">Win + Shift + S</span>
+              </div>
+              <div class="card-badge-disc">4</div>
+            </button>
+
+          </div>
+        </section>
+
+      </div>
+    </div>
+
+    <!-- Minimal Liquid Glass Pagination Dots -->
+    <footer class="bottom-page-indicator">
+      <div class="carousel-dots-pill" id="carouselDots">
+        <span class="carousel-dot active" onclick="switchPage(0)"></span>
+        <span class="carousel-dot" onclick="switchPage(1)"></span>
+        <span class="carousel-dot" onclick="switchPage(2)"></span>
+      </div>
     </footer>
 
-  </main>
-
-  <!-- ================= MISSION CONTROL DRAWER (8 APPS) ================= -->
-  <div class="deck-modal-backdrop" id="missionControlModal" onclick="closeModalsOnBackdrop(event)">
-    <div class="deck-modal-sheet">
-      <div class="modal-header">
-        <div class="modal-title-group">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-          <span class="modal-title">Mission Control</span>
-        </div>
-        <button class="modal-close-btn" onclick="toggleMissionControl()">✕</button>
-      </div>
-
-      <div class="modal-apps-grid">
-        <button class="app-card-btn" onclick="launchApp(1, 'Browser')">
-          <div class="app-icon-wrap" style="color: #60a5fa;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-          </div>
-          <span class="app-card-name">Browser</span>
-        </button>
-
-        <button class="app-card-btn" onclick="launchApp(2, 'Spotify')">
-          <div class="app-icon-wrap" style="color: #4ade80;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M8 11.5c3.5-1 7.5-.5 10.5 1"></path><path d="M7 14.5c3-.8 6.5-.4 9.5.8"></path><path d="M9 8.5c4-1.2 9-.8 12.5 1"></path></svg>
-          </div>
-          <span class="app-card-name">Spotify</span>
-        </button>
-
-        <button class="app-card-btn" onclick="launchApp(3, 'Explorer')">
-          <div class="app-icon-wrap" style="color: #fbbf24;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-          </div>
-          <span class="app-card-name">Explorer</span>
-        </button>
-
-        <button class="app-card-btn" onclick="launchApp(4, 'Task Manager')">
-          <div class="app-icon-wrap" style="color: #c084fc;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-          </div>
-          <span class="app-card-name">Task Mgr</span>
-        </button>
-
-        <button class="app-card-btn" onclick="launchApp(5, 'Terminal')">
-          <div class="app-icon-wrap" style="color: #94a3b8;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
-          </div>
-          <span class="app-card-name">Terminal</span>
-        </button>
-
-        <button class="app-card-btn" onclick="launchApp(6, 'Calculator')">
-          <div class="app-icon-wrap" style="color: #f43f5e;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="16" y1="14" x2="16" y2="18"></line><line x1="8" y1="10" x2="8.01" y2="10"></line><line x1="12" y1="10" x2="12.01" y2="10"></line><line x1="16" y1="10" x2="16.01" y2="10"></line></svg>
-          </div>
-          <span class="app-card-name">Calculator</span>
-        </button>
-
-        <button class="app-card-btn" onclick="launchApp(7, 'Notepad')">
-          <div class="app-icon-wrap" style="color: #818cf8;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line></svg>
-          </div>
-          <span class="app-card-name">Notepad</span>
-        </button>
-
-        <button class="app-card-btn" onclick="launchApp(8, 'Settings')">
-          <div class="app-icon-wrap" style="color: #22d3ee;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-          </div>
-          <span class="app-card-name">Settings</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ================= MORE ACTIONS POPUP (SCREENSHOT & CLIPBOARD) ================= -->
-  <div class="deck-modal-backdrop" id="moreActionsModal" onclick="closeModalsOnBackdrop(event)">
-    <div class="deck-more-sheet">
-      <div class="more-sheet-header">
-        <span>Quick Utilities</span>
-        <button class="modal-close-btn" onclick="toggleMoreMenu()">✕</button>
-      </div>
-      <div class="more-actions-list">
-        <button class="more-action-item" onclick="triggerPillAction('screenshot'); toggleMoreMenu();">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
-          <div class="more-action-text">
-            <span class="more-action-title">Screenshot</span>
-            <span class="more-action-shortcut">Win + Shift + S</span>
-          </div>
-        </button>
-        <button class="more-action-item" onclick="triggerPillAction('history'); toggleMoreMenu();">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
-          <div class="more-action-text">
-            <span class="more-action-title">Clipboard History</span>
-            <span class="more-action-shortcut">Win + V</span>
-          </div>
-        </button>
-      </div>
-    </div>
   </div>
 
   <!-- ================= DESKTOP SELECTOR OVERLAY ================= -->

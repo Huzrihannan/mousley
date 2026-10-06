@@ -1,32 +1,48 @@
-// Mousely - Liquid Glass Master Deck (Zero-Lag Ultra Responsive Engine)
+// Mousely - 3-Page Liquid Glass Master Remote Engine (Zero-Lag Ultra Responsive)
 (function() {
   'use strict';
 
-  // State
+  // Global State
   let ws = null;
   let serverHost = window.location.host || '';
   let isConnected = false;
+  let currentPage = 0;
+
+  // Media & Volume State
   let isDraggingVolume = false;
   let isScrubbingWaveform = false;
   let currentVolume = 75;
   let isMuted = false;
   let isPlaying = false;
-  let currentPosition = 97; // 1:37 default preview
-  let duration = 272; // 4:32 default preview
+  let currentPosition = 97; // 1:37 preview
+  let duration = 272; // 4:32 preview
   let lastPositionUpdate = performance.now();
-  let discoveredServers = new Map();
   let volumeThrottleTimer = null;
   let volumeRafId = null;
   let isShuffle = false;
   let isRepeat = false;
   let isFavorite = false;
   let lastTrackKey = '';
+  let discoveredServers = new Map();
+
+  // Gesture State
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchDiffX = 0;
+  let isSwiping = false;
 
   // DOM Elements
   const fluidBgCanvas = document.getElementById('fluidBgCanvas');
   const appleToast = document.getElementById('appleToast');
   const toastIcon = document.getElementById('toastIcon');
   const toastText = document.getElementById('toastText');
+
+  const statusDot = document.getElementById('statusDot');
+  const statusDeviceName = document.getElementById('statusDeviceName');
+  const navTabs = document.getElementById('navTabs');
+  const carouselTrack = document.getElementById('carouselTrack');
+  const carouselViewport = document.getElementById('carouselViewport');
+  const carouselDots = document.getElementById('carouselDots');
 
   const albumArtImg = document.getElementById('albumArtImg');
   const trackTitle = document.getElementById('trackTitle');
@@ -45,17 +61,14 @@
   const btnNext = document.getElementById('btnNext');
   const btnShuffle = document.getElementById('btnShuffle');
   const btnRepeat = document.getElementById('btnRepeat');
+  const btnHeart = document.getElementById('btnHeart');
 
   const volumeTrack = document.getElementById('volumeTrack');
   const volumeFill = document.getElementById('volumeFill');
   const volumeBadge = document.getElementById('volumeBadge');
-  const btnMuteToggle = document.getElementById('btnMuteToggle');
   const volIcon = document.getElementById('volIcon');
   const muteIcon = document.getElementById('muteIcon');
-  const btnHeart = document.getElementById('btnHeart');
 
-  const missionControlModal = document.getElementById('missionControlModal');
-  const moreActionsModal = document.getElementById('moreActionsModal');
   const desktopLaunchOverlay = document.getElementById('desktopLaunchOverlay');
   const desktopDevicesList = document.getElementById('desktopDevicesList');
   const manualIpInput = document.getElementById('manualIpInput');
@@ -76,10 +89,10 @@
     let t = 0;
 
     function renderLoop() {
-      t += 0.009; // Continuous smooth evolution
+      t += 0.009; // Continuous smooth movement
       ctx.clearRect(0, 0, width, height);
 
-      // Deep obsidian-crimson gradient base
+      // Deep obsidian-crimson radial background base
       const bgGrad = ctx.createRadialGradient(
         width * 0.5, height * 0.45, 40,
         width * 0.5, height * 0.5, Math.max(width, height) * 0.75
@@ -90,11 +103,10 @@
       ctx.fillStyle = bgGrad;
       ctx.fillRect(0, 0, width, height);
 
-      // Additive blending for luminous silky red ribbons
+      // Additive blending for luminous silky red wave ribbons
       ctx.save();
       ctx.globalCompositeOperation = 'screen';
 
-      // 4 Fluid Molten Ribbons with continuous harmonic wave equations
       const ribbons = [
         { yBase: height * 0.35, amp1: 45, amp2: 25, freq1: 0.0022, freq2: 0.0045, speed: 1.0, color: 'rgba(255, 30, 60, 0.42)', width: 68 },
         { yBase: height * 0.55, amp1: 55, amp2: 35, freq1: 0.0018, freq2: 0.0038, speed: 0.8, color: 'rgba(220, 10, 45, 0.35)', width: 90 },
@@ -147,12 +159,82 @@
     renderLoop();
   }
 
-  // ================= 2. DYNAMIC AUDIO WAVEFORM SCRUBBER =================
+  // ================= 2. CAROUSEL & SWIPE NAVIGATION =================
+  window.switchPage = function(pageIndex) {
+    if (pageIndex < 0 || pageIndex > 2) return;
+    currentPage = pageIndex;
+
+    const offsetPercent = pageIndex * 33.333333;
+    if (carouselTrack) {
+      carouselTrack.style.transform = `translate3d(-${offsetPercent}%, 0, 0)`;
+    }
+
+    // Update Top Segmented Tabs
+    if (navTabs) {
+      const tabs = navTabs.querySelectorAll('.nav-glass-tab');
+      tabs.forEach((tab, idx) => {
+        tab.classList.toggle('active', idx === pageIndex);
+      });
+    }
+
+    // Update Bottom Dots
+    if (carouselDots) {
+      const dots = carouselDots.querySelectorAll('.carousel-dot');
+      dots.forEach((dot, idx) => {
+        dot.classList.toggle('active', idx === pageIndex);
+      });
+    }
+
+    triggerHaptic('light');
+  };
+
+  // Touch Swipe & Multi-Touch Support
+  function setupSwipeNavigation() {
+    if (!carouselViewport) return;
+
+    carouselViewport.addEventListener('touchstart', (e) => {
+      if (e.touches.length >= 1) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        touchDiffX = 0;
+        isSwiping = true;
+      }
+    }, { passive: true });
+
+    carouselViewport.addEventListener('touchmove', (e) => {
+      if (!isSwiping || isDraggingVolume || isScrubbingWaveform) return;
+      const currentX = e.touches[0].clientX;
+      const currentY = e.touches[0].clientY;
+      const diffX = currentX - touchStartX;
+      const diffY = currentY - touchStartY;
+
+      // Lock to horizontal swipe
+      if (Math.abs(diffX) > Math.abs(diffY)) {
+        touchDiffX = diffX;
+      }
+    }, { passive: true });
+
+    carouselViewport.addEventListener('touchend', () => {
+      if (!isSwiping) return;
+      isSwiping = false;
+
+      const swipeThreshold = 55;
+      if (touchDiffX < -swipeThreshold) {
+        // Swiped Left -> Next Page
+        switchPage(Math.min(2, currentPage + 1));
+      } else if (touchDiffX > swipeThreshold) {
+        // Swiped Right -> Prev Page
+        switchPage(Math.max(0, currentPage - 1));
+      }
+      touchDiffX = 0;
+    }, { passive: true });
+  }
+
+  // ================= 3. AUDIO WAVEFORM SCRUBBER =================
   let waveformBars = [];
   function generateWaveformBars() {
     waveformBars = [];
     const count = 56;
-    // Generate organic soundwave profile resembling the reference UI
     for (let i = 0; i < count; i++) {
       const mid = Math.abs(i - count / 2) / (count / 2);
       const envelope = Math.max(0.15, 1 - mid * 0.6);
@@ -204,7 +286,6 @@
       }
 
       ctx.beginPath();
-      // Draw rounded vertical bar
       const radius = barWidth / 2;
       const topY = centerY - barH / 2;
       ctx.roundRect ? ctx.roundRect(x, topY, barWidth, barH, radius) : ctx.rect(x, topY, barWidth, barH);
@@ -212,12 +293,10 @@
       ctx.restore();
     }
 
-    // Position needle
     if (waveformNeedle) {
       waveformNeedle.style.left = `${progressRatio * 100}%`;
     }
 
-    // Format timestamps
     if (timeElapsed) timeElapsed.textContent = formatTime(currentPosition);
     if (timeTotal) timeTotal.textContent = formatTime(duration);
   }
@@ -262,7 +341,6 @@
     waveformBar.addEventListener('pointercancel', finishScrub);
   }
 
-  // Live Scrubber Progress Ticker
   setInterval(() => {
     if (isPlaying && !isScrubbingWaveform && duration > 0) {
       const now = performance.now();
@@ -275,7 +353,7 @@
     }
   }, 250);
 
-  // ================= 3. HAPTICS & TOAST NOTIFICATION =================
+  // ================= 4. HAPTICS & TOAST NOTIFICATION =================
   function triggerHaptic(style = 'light') {
     try {
       if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.nativeApp) {
@@ -305,7 +383,7 @@
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   }
 
-  // ================= 4. VOLUME SLIDER ENGINE =================
+  // ================= 5. VOLUME SLIDER ENGINE =================
   function updateVolumeUI(val, animate = true) {
     val = Math.max(0, Math.min(100, Math.round(val)));
     currentVolume = val;
@@ -380,7 +458,7 @@
     sendCommand('mute');
   };
 
-  // ================= 5. TRANSPORT CONTROLS =================
+  // ================= 6. TRANSPORT CONTROLS =================
   const bindInstantTap = (el, callback) => {
     if (!el) return;
     let touchHandled = false;
@@ -438,7 +516,13 @@
     showToast(isFavorite ? 'Added to Favorites' : 'Removed from Favorites', '❤️');
   };
 
-  // ================= 6. SHORTCUT PILLS (1 TO 8) =================
+  // ================= 7. MISSION CONTROL & SHORTCUT ACTIONS =================
+  window.launchApp = function(slot, name) {
+    triggerHaptic('medium');
+    showToast(`Launching ${name}...`, '🚀');
+    sendCommand('launch_app', { slot: slot, name: name });
+  };
+
   window.triggerPillAction = function(type) {
     triggerHaptic('medium');
     const toastMap = {
@@ -459,17 +543,7 @@
     sendCommand('clipboard_action', { type: type });
   };
 
-  // ================= 7. MODALS & MISSION CONTROL =================
-  window.toggleMissionControl = function() {
-    triggerHaptic('light');
-    missionControlModal.classList.toggle('open');
-  };
-
-  window.toggleMoreMenu = function() {
-    triggerHaptic('light');
-    moreActionsModal.classList.toggle('open');
-  };
-
+  // ================= 8. DESKTOP SELECTOR OVERLAY =================
   window.showDesktopSelector = function() {
     triggerHaptic('light');
     desktopLaunchOverlay.classList.add('open');
@@ -486,14 +560,7 @@
     }
   };
 
-  window.launchApp = function(slot, name) {
-    triggerHaptic('medium');
-    missionControlModal.classList.remove('open');
-    showToast(`Launching ${name}...`, '🚀');
-    sendCommand('launch_app', { slot: slot, name: name });
-  };
-
-  // ================= 8. WEBSOCKET NETWORK CORE =================
+  // ================= 9. WEBSOCKET NETWORK CORE =================
   function sendCommand(action, params = {}) {
     if (!ws || ws.readyState !== WebSocket.OPEN) {
       if (serverHost) connectWebSocket(serverHost);
@@ -527,6 +594,8 @@
     ws.onopen = function() {
       isConnected = true;
       localStorage.setItem('mousely_last_host', host);
+      if (statusDot) statusDot.classList.add('connected');
+      if (statusDeviceName) statusDeviceName.textContent = host.split(':')[0];
       showToast('Connected to Windows Host', '🖥️');
       hideDesktopSelector();
       sendCommand('get_state');
@@ -541,6 +610,8 @@
 
     ws.onclose = function() {
       isConnected = false;
+      if (statusDot) statusDot.classList.remove('connected');
+      if (statusDeviceName) statusDeviceName.textContent = 'Disconnected';
       scheduleReconnect();
     };
 
@@ -622,7 +693,7 @@
     renderWaveform();
   }
 
-  // ================= 9. AUTO-DISCOVERY & SUBNET PROBING =================
+  // ================= 10. AUTO-DISCOVERY & SUBNET PROBING =================
   function fetchWithTimeout(url, timeoutMs = 1200) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -707,16 +778,16 @@
     connectWebSocket(ip);
   };
 
-  // ================= 10. INITIALIZATION =================
+  // ================= 11. INITIALIZATION =================
   window.addEventListener('DOMContentLoaded', () => {
     initFluidBackground();
+    setupSwipeNavigation();
     generateWaveformBars();
     setupWaveformEvents();
     setupVolumeEvents();
     renderWaveform();
     updateVolumeUI(currentVolume, false);
 
-    // Initial connection attempt
     const lastHost = localStorage.getItem('mousely_last_host');
     if (lastHost) {
       connectWebSocket(lastHost);
