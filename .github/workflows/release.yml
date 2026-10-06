@@ -8,7 +8,7 @@ on:
       tag_name:
         description: 'Release Tag (e.g. v1.0.4)'
         required: false
-        default: 'v1.0.6'
+        default: 'v1.0.7'
 
 permissions:
   contents: write
@@ -128,7 +128,7 @@ jobs:
           elif [[ -n "${{ github.event.inputs.tag_name }}" ]]; then
             TAG="${{ github.event.inputs.tag_name }}"
           else
-            TAG="v1.0.6"
+            TAG="v1.0.7"
           fi
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "Using tag: $TAG"
@@ -154,9 +154,9 @@ jobs:
 
             ### ✨ Key Features:
             - **📱 Landscape Exclusive**: Engineered for iPhone 7 Plus widescreen display (736×414 pt).
-            - **✌️ 2-Finger Swipe Navigation**: Effortlessly glide between 3 pages:
-              1. **🎵 Page 1 — Media Control**: GSMTC live playback, scrubber, album art, and instant bidirectional volume sync (<5ms).
+            - **✌️ Fluid Swipe Navigation**: Effortlessly glide between 3 pages:
+              1. **🎵 Page 1 — Media Control**: Multi-session GSMTC live playback, scrubber, album art, and instant bidirectional volume sync (<5ms).
               2. **🚀 Page 2 — Mission Control (8 Blocks)**: 1-tap launcher for Browser, Spotify, File Explorer, Task Manager, Terminal, Calculator, Notepad, and Settings.
-              3. **📋 Page 3 — Quick Action Blocks (3 Blocks)**: Direct simulation of `Ctrl + C`, `Ctrl + V`, and `Win + V` with Win32 `SendInput`.
-            - **🍏 Liquid Glass UI**: Apple VisionOS / iOS style double-beveled glass with dynamic ambient orbs.
+              3. **📋 Page 3 — Quick Action Blocks (4 Blocks)**: Direct keyboard emulation via Win32 `keybd_event` for `Ctrl + C`, `Ctrl + V`, `Win + V` (Clipboard History), and `Win + Shift + S` (Screenshot).
+            - **🍏 Liquid Glass UI**: Apple VisionOS / Product Red liquid glass with ambient chromatic orbs.
             - **🔍 Zero-Config Local Wi-Fi**: UDP broadcast beacon auto-discovers your PC on port 58920.

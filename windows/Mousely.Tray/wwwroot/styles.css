@@ -862,10 +862,11 @@ html, body {
   justify-content: space-between;
 }
 
+.blocks-grid-4,
 .blocks-grid-3 {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
   flex: 1;
   align-items: stretch;
 }

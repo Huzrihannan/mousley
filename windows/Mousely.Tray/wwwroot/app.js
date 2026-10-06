@@ -446,7 +446,12 @@
         if (msg.action === 'launch_app') {
           showToast('App Launched', '🚀');
         } else if (msg.action === 'clipboard_action') {
-          const names = { copy: 'Copied (Ctrl+C)', paste: 'Pasted (Ctrl+V)', history: 'Clipboard History (Win+V)' };
+          const names = { 
+            copy: 'Copied (Ctrl+C)', 
+            paste: 'Pasted (Ctrl+V)', 
+            history: 'Clipboard History (Win+V)',
+            screenshot: 'Screenshot (Win+Shift+S)' 
+          };
           showToast(names[msg.clipType] || 'Action Completed', '📋');
         }
         break;
@@ -578,30 +583,39 @@
   function updateMediaUI(media) {
     if (!media) return;
 
-    trackTitle.textContent = media.title || 'No Media Playing';
-    trackArtist.textContent = media.artist ? (media.artist + (media.album ? ` • ${media.album}` : '')) : 'Windows Media Session';
+    const title = media.title || media.Title || 'No Media Playing';
+    const artist = media.artist || media.Artist || '';
+    const album = media.album || media.Album || '';
+    const source = media.source || media.Source || 'Windows Media';
+    const mediaPlaying = media.isPlaying !== undefined ? !!media.isPlaying : (media.IsPlaying !== undefined ? !!media.IsPlaying : false);
+    const mediaDuration = media.duration !== undefined ? media.duration : (media.Duration !== undefined ? media.Duration : 0);
+    const mediaPosition = media.position !== undefined ? media.position : (media.Position !== undefined ? media.Position : 0);
+    const artwork = media.artwork || media.Artwork || null;
+    const hasArtwork = media.hasArtwork !== undefined ? !!media.hasArtwork : (media.HasArtwork !== undefined ? !!media.HasArtwork : false);
 
-    if (media.source) sourceAppPill.textContent = media.source;
+    trackTitle.textContent = title;
+    trackArtist.textContent = artist ? (artist + (album ? ` • ${album}` : '')) : 'Windows Media Session';
+    sourceAppPill.textContent = source;
 
-    isPlaying = !!media.isPlaying;
+    isPlaying = mediaPlaying;
     playIcon.style.display = isPlaying ? 'none' : 'block';
     pauseIcon.style.display = isPlaying ? 'block' : 'none';
 
-    const currentKey = `${media.title || ''}|${media.artist || ''}|${media.hasArtwork}|${media.artwork || ''}`;
+    const currentKey = `${title}|${artist}|${hasArtwork}|${artwork || ''}`;
     if (currentKey !== lastTrackKey) {
       lastTrackKey = currentKey;
-      if (media.artwork) {
-        albumArtImg.src = media.artwork;
-      } else if (media.hasArtwork && serverHost) {
+      if (artwork) {
+        albumArtImg.src = artwork;
+      } else if (hasArtwork && serverHost) {
         albumArtImg.src = `http://${serverHost}/api/artwork?t=${Date.now()}`;
       } else {
         albumArtImg.src = 'assets/default-art.svg';
       }
     }
 
-    if (media.duration !== undefined) duration = media.duration;
-    if (media.position !== undefined) {
-      currentPosition = media.position;
+    if (mediaDuration > 0) duration = mediaDuration;
+    if (mediaPosition >= 0) {
+      currentPosition = mediaPosition;
       lastPositionUpdate = performance.now();
     }
 
@@ -721,7 +735,8 @@
     const labels = {
       copy: ['Copied (Ctrl + C)', '📋'],
       paste: ['Pasting (Ctrl + V)', '📥'],
-      history: ['Clipboard History (Win + V)', '📜']
+      history: ['Clipboard History (Win + V)', '📜'],
+      screenshot: ['Screenshot (Win + Shift + S)', '📸']
     };
     const info = labels[type] || ['Action Sent', '✨'];
     showToast(info[0], info[1]);

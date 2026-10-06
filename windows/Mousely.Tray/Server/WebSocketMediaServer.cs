@@ -378,6 +378,7 @@ namespace Mousely.Tray.Server
                         if (clipType == "copy") ShortcutManager.SendCopy();
                         else if (clipType == "paste") ShortcutManager.SendPaste();
                         else if (clipType == "history") ShortcutManager.SendClipboardHistory();
+                        else if (clipType == "screenshot") ShortcutManager.SendScreenshot();
                         await SendJsonAsync(ws, new { type = "action_ack", action = "clipboard_action", clipType = clipType, success = true }, token);
                         break;
                 }
@@ -387,6 +388,12 @@ namespace Mousely.Tray.Server
                 Console.WriteLine($"[Server] Command parsing error: {ex.Message}");
             }
         }
+
+        private static readonly JsonSerializerOptions JsonOptions = new()
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            PropertyNameCaseInsensitive = true
+        };
 
         private void OnVolumeChanged(float volume, bool isMuted)
         {
@@ -411,7 +418,7 @@ namespace Mousely.Tray.Server
 
         private async Task BroadcastJsonAsync(object obj)
         {
-            string json = JsonSerializer.Serialize(obj);
+            string json = JsonSerializer.Serialize(obj, JsonOptions);
             byte[] bytes = Encoding.UTF8.GetBytes(json);
             var segment = new ArraySegment<byte>(bytes);
 
@@ -432,7 +439,7 @@ namespace Mousely.Tray.Server
         private static async Task SendJsonAsync(WebSocket ws, object obj, CancellationToken token)
         {
             if (ws.State != WebSocketState.Open) return;
-            string json = JsonSerializer.Serialize(obj);
+            string json = JsonSerializer.Serialize(obj, JsonOptions);
             byte[] bytes = Encoding.UTF8.GetBytes(json);
             await ws.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, token);
         }

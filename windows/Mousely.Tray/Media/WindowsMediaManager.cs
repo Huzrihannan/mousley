@@ -26,6 +26,7 @@ namespace Mousely.Tray.Media
         private GlobalSystemMediaTransportControlsSession? _currentSession;
         private readonly object _lock = new();
         private byte[]? _cachedArtworkBytes;
+        private System.Threading.Timer? _pollTimer;
 
         public event Action<MediaState>? MediaStateChanged;
 
@@ -47,6 +48,8 @@ namespace Mousely.Tray.Media
             {
                 Console.WriteLine($"[WindowsMediaManager] Initialization failed: {ex.Message}");
             }
+
+            _pollTimer = new System.Threading.Timer(_ => _ = RefreshMediaStateAsync(), null, 1500, 1500);
         }
 
         private void OnCurrentSessionChanged(GlobalSystemMediaTransportControlsSessionManager sender, CurrentSessionChangedEventArgs args)
@@ -107,11 +110,60 @@ namespace Mousely.Tray.Media
         public async Task<MediaState> RefreshMediaStateAsync()
         {
             var state = new MediaState();
-            GlobalSystemMediaTransportControlsSession? session;
+            GlobalSystemMediaTransportControlsSession? session = null;
+
+            if (_sessionManager != null)
+            {
+                try
+                {
+                    var sessions = _sessionManager.GetSessions();
+                    if (sessions != null && sessions.Count > 0)
+                    {
+                        // Prioritize any session that is actively playing
+                        foreach (var s in sessions)
+                        {
+                            try
+                            {
+                                var info = s.GetPlaybackInfo();
+                                if (info != null && info.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing)
+                                {
+                                    session = s;
+                                    break;
+                                }
+                            }
+                            catch { }
+                        }
+
+                        if (session == null)
+                        {
+                            session = _sessionManager.GetCurrentSession() ?? sessions[0];
+                        }
+                    }
+                    else
+                    {
+                        session = _sessionManager.GetCurrentSession();
+                    }
+                }
+                catch
+                {
+                    session = _sessionManager.GetCurrentSession();
+                }
+            }
 
             lock (_lock)
             {
-                session = _currentSession ?? _sessionManager?.GetCurrentSession();
+                if (session != null && session != _currentSession)
+                {
+                    DetachFromCurrentSession();
+                    _currentSession = session;
+                    try
+                    {
+                        _currentSession.PlaybackInfoChanged += OnPlaybackInfoChanged;
+                        _currentSession.MediaPropertiesChanged += OnMediaPropertiesChanged;
+                        _currentSession.TimelinePropertiesChanged += OnTimelinePropertiesChanged;
+                    }
+                    catch { }
+                }
             }
 
             if (session != null)
@@ -281,6 +333,8 @@ namespace Mousely.Tray.Media
 
         public void Dispose()
         {
+            _pollTimer?.Dispose();
+            _pollTimer = null;
             DetachFromCurrentSession();
             if (_sessionManager != null)
             {

@@ -9,64 +9,18 @@ namespace Mousely.Tray.Media
 {
     public static class ShortcutManager
     {
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
-
         [DllImport("user32.dll")]
-        private static extern uint MapVirtualKey(uint uCode, uint uMapType);
+        private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
 
-        [StructLayout(LayoutKind.Sequential)]
-        private struct INPUT
-        {
-            public uint type;
-            public InputUnion u;
-        }
-
-        [StructLayout(LayoutKind.Explicit)]
-        private struct InputUnion
-        {
-            [FieldOffset(0)]
-            public KEYBDINPUT ki;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct KEYBDINPUT
-        {
-            public ushort wVk;
-            public ushort wScan;
-            public uint dwFlags;
-            public uint time;
-            public UIntPtr dwExtraInfo;
-        }
-
-        private const uint INPUT_KEYBOARD = 1;
         private const uint KEYEVENTF_KEYUP = 0x0002;
         private const uint KEYEVENTF_EXTENDEDKEY = 0x0001;
 
-        private const ushort VK_CONTROL = 0x11;
-        private const ushort VK_LWIN = 0x5B;
-        private const ushort VK_C = 0x43;
-        private const ushort VK_V = 0x56;
-
-        private static void SendKey(ushort vk, bool isUp, bool isExtended = false)
-        {
-            var input = new INPUT
-            {
-                type = INPUT_KEYBOARD,
-                u = new InputUnion
-                {
-                    ki = new KEYBDINPUT
-                    {
-                        wVk = vk,
-                        wScan = (ushort)MapVirtualKey(vk, 0),
-                        dwFlags = (isUp ? KEYEVENTF_KEYUP : 0) | (isExtended ? KEYEVENTF_EXTENDEDKEY : 0),
-                        time = 0,
-                        dwExtraInfo = UIntPtr.Zero
-                    }
-                }
-            };
-            SendInput(1, new[] { input }, Marshal.SizeOf(typeof(INPUT)));
-        }
+        private const byte VK_SHIFT = 0x10;
+        private const byte VK_CONTROL = 0x11;
+        private const byte VK_LWIN = 0x5B;
+        private const byte VK_C = 0x43;
+        private const byte VK_V = 0x56;
+        private const byte VK_S = 0x53;
 
         public static void SendCopy()
         {
@@ -74,13 +28,13 @@ namespace Mousely.Tray.Media
             {
                 try
                 {
-                    SendKey(VK_CONTROL, false);
-                    Thread.Sleep(45);
-                    SendKey(VK_C, false);
-                    Thread.Sleep(45);
-                    SendKey(VK_C, true);
-                    Thread.Sleep(45);
-                    SendKey(VK_CONTROL, true);
+                    keybd_event(VK_CONTROL, 0, 0, UIntPtr.Zero);
+                    Thread.Sleep(30);
+                    keybd_event(VK_C, 0, 0, UIntPtr.Zero);
+                    Thread.Sleep(30);
+                    keybd_event(VK_C, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+                    Thread.Sleep(30);
+                    keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
                     Console.WriteLine("[ShortcutManager] Sent Ctrl+C (Copy)");
                 }
                 catch (Exception ex)
@@ -96,13 +50,13 @@ namespace Mousely.Tray.Media
             {
                 try
                 {
-                    SendKey(VK_CONTROL, false);
-                    Thread.Sleep(45);
-                    SendKey(VK_V, false);
-                    Thread.Sleep(45);
-                    SendKey(VK_V, true);
-                    Thread.Sleep(45);
-                    SendKey(VK_CONTROL, true);
+                    keybd_event(VK_CONTROL, 0, 0, UIntPtr.Zero);
+                    Thread.Sleep(30);
+                    keybd_event(VK_V, 0, 0, UIntPtr.Zero);
+                    Thread.Sleep(30);
+                    keybd_event(VK_V, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+                    Thread.Sleep(30);
+                    keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
                     Console.WriteLine("[ShortcutManager] Sent Ctrl+V (Paste)");
                 }
                 catch (Exception ex)
@@ -118,19 +72,49 @@ namespace Mousely.Tray.Media
             {
                 try
                 {
-                    SendKey(VK_LWIN, false, isExtended: true);
-                    Thread.Sleep(50);
-                    SendKey(VK_V, false);
-                    Thread.Sleep(50);
-                    SendKey(VK_V, true);
-                    Thread.Sleep(50);
-                    SendKey(VK_LWIN, true, isExtended: true);
+                    keybd_event(VK_LWIN, 0, KEYEVENTF_EXTENDEDKEY, UIntPtr.Zero);
+                    Thread.Sleep(35);
+                    keybd_event(VK_V, 0, 0, UIntPtr.Zero);
+                    Thread.Sleep(35);
+                    keybd_event(VK_V, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+                    Thread.Sleep(35);
+                    keybd_event(VK_LWIN, 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, UIntPtr.Zero);
                     Console.WriteLine("[ShortcutManager] Sent Win+V (Clipboard History)");
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"[ShortcutManager] Clipboard history error: {ex.Message}");
                 }
+            });
+        }
+
+        public static void SendScreenshot()
+        {
+            Task.Run(() =>
+            {
+                try
+                {
+                    keybd_event(VK_LWIN, 0, KEYEVENTF_EXTENDEDKEY, UIntPtr.Zero);
+                    keybd_event(VK_SHIFT, 0, 0, UIntPtr.Zero);
+                    Thread.Sleep(35);
+                    keybd_event(VK_S, 0, 0, UIntPtr.Zero);
+                    Thread.Sleep(35);
+                    keybd_event(VK_S, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+                    Thread.Sleep(35);
+                    keybd_event(VK_SHIFT, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+                    keybd_event(VK_LWIN, 0, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, UIntPtr.Zero);
+                    Console.WriteLine("[ShortcutManager] Sent Win+Shift+S (Screenshot)");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[ShortcutManager] Screenshot error: {ex.Message}");
+                }
+
+                try
+                {
+                    StartViaShell("ms-screenclip:");
+                }
+                catch { }
             });
         }
 
