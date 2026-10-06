@@ -1,21 +1,20 @@
-// Mousely - 3-Page Liquid Glass Master Remote Engine (Zero-Lag Ultra Responsive)
+// Mousely - Ultra-Performance Zero-Lag Liquid Remote Engine (120FPS Fast Touch)
 (function() {
   'use strict';
 
-  // Global State
+  // State
   let ws = null;
   let serverHost = window.location.host || '';
   let isConnected = false;
   let currentPage = 0;
 
-  // Media & Volume State
   let isDraggingVolume = false;
   let isScrubbingWaveform = false;
   let currentVolume = 75;
   let isMuted = false;
   let isPlaying = false;
-  let currentPosition = 97; // 1:37 preview
-  let duration = 272; // 4:32 preview
+  let currentPosition = 97;
+  let duration = 272;
   let lastPositionUpdate = performance.now();
   let volumeThrottleTimer = null;
   let volumeRafId = null;
@@ -32,7 +31,6 @@
   let isSwiping = false;
 
   // DOM Elements
-  const fluidBgCanvas = document.getElementById('fluidBgCanvas');
   const appleToast = document.getElementById('appleToast');
   const toastIcon = document.getElementById('toastIcon');
   const toastText = document.getElementById('toastText');
@@ -48,17 +46,16 @@
   const trackTitle = document.getElementById('trackTitle');
   const trackArtist = document.getElementById('trackArtist');
 
-  const waveformCanvas = document.getElementById('waveformCanvas');
   const waveformBar = document.getElementById('waveformBar');
+  const waveformBarsBase = document.getElementById('waveformBarsBase');
+  const waveformBarsActive = document.getElementById('waveformBarsActive');
+  const waveformProgressClip = document.getElementById('waveformProgressClip');
   const waveformNeedle = document.getElementById('waveformNeedle');
   const timeElapsed = document.getElementById('timeElapsed');
   const timeTotal = document.getElementById('timeTotal');
 
-  const btnPlayPause = document.getElementById('btnPlayPause');
   const playIcon = document.getElementById('playIcon');
   const pauseIcon = document.getElementById('pauseIcon');
-  const btnPrev = document.getElementById('btnPrev');
-  const btnNext = document.getElementById('btnNext');
   const btnShuffle = document.getElementById('btnShuffle');
   const btnRepeat = document.getElementById('btnRepeat');
   const btnHeart = document.getElementById('btnHeart');
@@ -73,287 +70,7 @@
   const desktopDevicesList = document.getElementById('desktopDevicesList');
   const manualIpInput = document.getElementById('manualIpInput');
 
-  // ================= 1. DYNAMIC CONTINUOUS FLUID BACKGROUND =================
-  function initFluidBackground() {
-    if (!fluidBgCanvas) return;
-    const ctx = fluidBgCanvas.getContext('2d');
-    let width = 0, height = 0;
-
-    function resize() {
-      width = fluidBgCanvas.width = window.innerWidth;
-      height = fluidBgCanvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', resize);
-    resize();
-
-    let t = 0;
-
-    function renderLoop() {
-      t += 0.009; // Continuous smooth movement
-      ctx.clearRect(0, 0, width, height);
-
-      // Deep obsidian-crimson radial background base
-      const bgGrad = ctx.createRadialGradient(
-        width * 0.5, height * 0.45, 40,
-        width * 0.5, height * 0.5, Math.max(width, height) * 0.75
-      );
-      bgGrad.addColorStop(0, 'rgba(46, 4, 11, 0.98)');
-      bgGrad.addColorStop(0.45, 'rgba(22, 2, 6, 0.99)');
-      bgGrad.addColorStop(1, '#070103');
-      ctx.fillStyle = bgGrad;
-      ctx.fillRect(0, 0, width, height);
-
-      // Additive blending for luminous silky red wave ribbons
-      ctx.save();
-      ctx.globalCompositeOperation = 'screen';
-
-      const ribbons = [
-        { yBase: height * 0.35, amp1: 45, amp2: 25, freq1: 0.0022, freq2: 0.0045, speed: 1.0, color: 'rgba(255, 30, 60, 0.42)', width: 68 },
-        { yBase: height * 0.55, amp1: 55, amp2: 35, freq1: 0.0018, freq2: 0.0038, speed: 0.8, color: 'rgba(220, 10, 45, 0.35)', width: 90 },
-        { yBase: height * 0.72, amp1: 40, amp2: 28, freq1: 0.0028, freq2: 0.0050, speed: 1.2, color: 'rgba(255, 60, 90, 0.28)', width: 55 },
-        { yBase: height * 0.20, amp1: 30, amp2: 20, freq1: 0.0025, freq2: 0.0042, speed: 0.6, color: 'rgba(180, 0, 30, 0.30)', width: 80 }
-      ];
-
-      for (let r = 0; r < ribbons.length; r++) {
-        const cfg = ribbons[r];
-        ctx.beginPath();
-        const step = 16;
-        for (let x = -20; x <= width + 20; x += step) {
-          const y = cfg.yBase +
-            Math.sin(x * cfg.freq1 + t * cfg.speed) * cfg.amp1 +
-            Math.cos(x * cfg.freq2 - t * cfg.speed * 0.7) * cfg.amp2;
-          if (x === -20) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
-
-        ctx.strokeStyle = cfg.color;
-        ctx.lineWidth = cfg.width;
-        ctx.lineCap = 'round';
-        ctx.shadowColor = '#ff1a40';
-        ctx.shadowBlur = 32;
-        ctx.stroke();
-      }
-
-      // Soft ambient glowing ruby orbs floating through space
-      const orbs = [
-        { x: width * (0.2 + 0.15 * Math.sin(t * 0.5)), y: height * (0.3 + 0.1 * Math.cos(t * 0.4)), r: 90, alpha: 0.18 },
-        { x: width * (0.8 + 0.12 * Math.cos(t * 0.6)), y: height * (0.7 + 0.12 * Math.sin(t * 0.5)), r: 120, alpha: 0.15 },
-        { x: width * (0.5 + 0.1 * Math.sin(t * 0.8)), y: height * (0.85 + 0.08 * Math.cos(t * 0.7)), r: 100, alpha: 0.22 }
-      ];
-
-      for (let i = 0; i < orbs.length; i++) {
-        const orb = orbs[i];
-        const orbGrad = ctx.createRadialGradient(orb.x, orb.y, 10, orb.x, orb.y, orb.r);
-        orbGrad.addColorStop(0, `rgba(255, 42, 85, ${orb.alpha})`);
-        orbGrad.addColorStop(1, 'rgba(255, 42, 85, 0)');
-        ctx.fillStyle = orbGrad;
-        ctx.beginPath();
-        ctx.arc(orb.x, orb.y, orb.r, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      ctx.restore();
-      requestAnimationFrame(renderLoop);
-    }
-
-    renderLoop();
-  }
-
-  // ================= 2. CAROUSEL & SWIPE NAVIGATION =================
-  window.switchPage = function(pageIndex) {
-    if (pageIndex < 0 || pageIndex > 2) return;
-    currentPage = pageIndex;
-
-    const offsetPercent = pageIndex * 33.333333;
-    if (carouselTrack) {
-      carouselTrack.style.transform = `translate3d(-${offsetPercent}%, 0, 0)`;
-    }
-
-    // Update Top Segmented Tabs
-    if (navTabs) {
-      const tabs = navTabs.querySelectorAll('.nav-glass-tab');
-      tabs.forEach((tab, idx) => {
-        tab.classList.toggle('active', idx === pageIndex);
-      });
-    }
-
-    // Update Bottom Dots
-    if (carouselDots) {
-      const dots = carouselDots.querySelectorAll('.carousel-dot');
-      dots.forEach((dot, idx) => {
-        dot.classList.toggle('active', idx === pageIndex);
-      });
-    }
-
-    triggerHaptic('light');
-  };
-
-  // Touch Swipe & Multi-Touch Support
-  function setupSwipeNavigation() {
-    if (!carouselViewport) return;
-
-    carouselViewport.addEventListener('touchstart', (e) => {
-      if (e.touches.length >= 1) {
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-        touchDiffX = 0;
-        isSwiping = true;
-      }
-    }, { passive: true });
-
-    carouselViewport.addEventListener('touchmove', (e) => {
-      if (!isSwiping || isDraggingVolume || isScrubbingWaveform) return;
-      const currentX = e.touches[0].clientX;
-      const currentY = e.touches[0].clientY;
-      const diffX = currentX - touchStartX;
-      const diffY = currentY - touchStartY;
-
-      // Lock to horizontal swipe
-      if (Math.abs(diffX) > Math.abs(diffY)) {
-        touchDiffX = diffX;
-      }
-    }, { passive: true });
-
-    carouselViewport.addEventListener('touchend', () => {
-      if (!isSwiping) return;
-      isSwiping = false;
-
-      const swipeThreshold = 55;
-      if (touchDiffX < -swipeThreshold) {
-        // Swiped Left -> Next Page
-        switchPage(Math.min(2, currentPage + 1));
-      } else if (touchDiffX > swipeThreshold) {
-        // Swiped Right -> Prev Page
-        switchPage(Math.max(0, currentPage - 1));
-      }
-      touchDiffX = 0;
-    }, { passive: true });
-  }
-
-  // ================= 3. AUDIO WAVEFORM SCRUBBER =================
-  let waveformBars = [];
-  function generateWaveformBars() {
-    waveformBars = [];
-    const count = 56;
-    for (let i = 0; i < count; i++) {
-      const mid = Math.abs(i - count / 2) / (count / 2);
-      const envelope = Math.max(0.15, 1 - mid * 0.6);
-      const raw = Math.sin(i * 0.38) * 0.35 + Math.cos(i * 0.72) * 0.3 + 0.5;
-      const heightFactor = Math.max(0.12, Math.min(1.0, raw * envelope));
-      waveformBars.push(heightFactor);
-    }
-  }
-
-  function renderWaveform() {
-    if (!waveformCanvas) return;
-    const ctx = waveformCanvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
-    const rect = waveformCanvas.getBoundingClientRect();
-
-    if (waveformCanvas.width !== Math.round(rect.width * dpr) || waveformCanvas.height !== Math.round(rect.height * dpr)) {
-      waveformCanvas.width = Math.round(rect.width * dpr);
-      waveformCanvas.height = Math.round(rect.height * dpr);
-    }
-
-    const w = waveformCanvas.width;
-    const h = waveformCanvas.height;
-    ctx.clearRect(0, 0, w, h);
-
-    if (waveformBars.length === 0) generateWaveformBars();
-
-    const progressRatio = duration > 0 ? Math.max(0, Math.min(1, currentPosition / duration)) : 0.36;
-    const barCount = waveformBars.length;
-    const gap = 2.5 * dpr;
-    const totalGap = gap * (barCount - 1);
-    const barWidth = Math.max(2 * dpr, (w - totalGap) / barCount);
-    const centerY = h / 2;
-
-    for (let i = 0; i < barCount; i++) {
-      const x = i * (barWidth + gap);
-      const barRatio = i / (barCount - 1);
-      const barH = waveformBars[i] * (h * 0.85);
-
-      const isElapsed = barRatio <= progressRatio;
-
-      ctx.save();
-      if (isElapsed) {
-        ctx.fillStyle = '#ff2a55';
-        ctx.shadowColor = '#ff2a55';
-        ctx.shadowBlur = 6 * dpr;
-      } else {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.38)';
-        ctx.shadowBlur = 0;
-      }
-
-      ctx.beginPath();
-      const radius = barWidth / 2;
-      const topY = centerY - barH / 2;
-      ctx.roundRect ? ctx.roundRect(x, topY, barWidth, barH, radius) : ctx.rect(x, topY, barWidth, barH);
-      ctx.fill();
-      ctx.restore();
-    }
-
-    if (waveformNeedle) {
-      waveformNeedle.style.left = `${progressRatio * 100}%`;
-    }
-
-    if (timeElapsed) timeElapsed.textContent = formatTime(currentPosition);
-    if (timeTotal) timeTotal.textContent = formatTime(duration);
-  }
-
-  function handleWaveformScrub(clientX) {
-    if (!waveformBar || duration <= 0) return;
-    const rect = waveformBar.getBoundingClientRect();
-    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    currentPosition = Math.round(ratio * duration);
-    renderWaveform();
-  }
-
-  function commitWaveformSeek() {
-    if (duration > 0) {
-      sendCommand('seek', { position: currentPosition });
-      triggerHaptic('light');
-    }
-  }
-
-  function setupWaveformEvents() {
-    if (!waveformBar) return;
-
-    waveformBar.addEventListener('pointerdown', (e) => {
-      isScrubbingWaveform = true;
-      try { waveformBar.setPointerCapture(e.pointerId); } catch (err) {}
-      handleWaveformScrub(e.clientX);
-    });
-
-    waveformBar.addEventListener('pointermove', (e) => {
-      if (isScrubbingWaveform) handleWaveformScrub(e.clientX);
-    });
-
-    const finishScrub = (e) => {
-      if (isScrubbingWaveform) {
-        isScrubbingWaveform = false;
-        try { waveformBar.releasePointerCapture(e.pointerId); } catch (err) {}
-        commitWaveformSeek();
-      }
-    };
-
-    waveformBar.addEventListener('pointerup', finishScrub);
-    waveformBar.addEventListener('pointercancel', finishScrub);
-  }
-
-  setInterval(() => {
-    if (isPlaying && !isScrubbingWaveform && duration > 0) {
-      const now = performance.now();
-      const elapsedSec = (now - lastPositionUpdate) / 1000;
-      if (currentPosition < duration) {
-        currentPosition = Math.min(duration, currentPosition + elapsedSec);
-        lastPositionUpdate = now;
-        renderWaveform();
-      }
-    }
-  }, 250);
-
-  // ================= 4. HAPTICS & TOAST NOTIFICATION =================
+  // ================= 1. INSTANT ZERO-LATENCY TOUCH DISPATCHER =================
   function triggerHaptic(style = 'light') {
     try {
       if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.nativeApp) {
@@ -383,13 +100,305 @@
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   }
 
-  // ================= 5. VOLUME SLIDER ENGINE =================
+  // Delegated 0ms Touch Activation
+  function setupFastTouchDispatcher() {
+    let activeEl = null;
+
+    document.addEventListener('touchstart', (e) => {
+      const btn = e.target.closest('.fast-touch');
+      if (btn) {
+        activeEl = btn;
+        btn.classList.add('touch-active');
+      }
+    }, { passive: true });
+
+    const clearTouchActive = () => {
+      if (activeEl) {
+        activeEl.classList.remove('touch-active');
+        activeEl = null;
+      }
+    };
+
+    document.addEventListener('touchcancel', clearTouchActive, { passive: true });
+
+    document.addEventListener('touchend', (e) => {
+      if (!activeEl) return;
+      const btn = activeEl;
+      clearTouchActive();
+
+      // Check if touch ended inside the element
+      const changedTouch = e.changedTouches ? e.changedTouches[0] : null;
+      if (changedTouch) {
+        const rect = btn.getBoundingClientRect();
+        if (
+          changedTouch.clientX >= rect.left &&
+          changedTouch.clientX <= rect.right &&
+          changedTouch.clientY >= rect.top &&
+          changedTouch.clientY <= rect.bottom
+        ) {
+          executeFastAction(btn);
+        }
+      }
+    }, { passive: true });
+
+    // Fallback click handler for desktop browser mouse clicks
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('.fast-touch');
+      if (btn && !e.sourceCapabilities?.firesTouchEvents) {
+        executeFastAction(btn);
+      }
+    });
+  }
+
+  function executeFastAction(el) {
+    const pageAttr = el.getAttribute('data-page');
+    if (pageAttr !== null) {
+      switchPage(parseInt(pageAttr, 10));
+      return;
+    }
+
+    const action = el.getAttribute('data-action');
+    if (!action) return;
+
+    triggerHaptic('medium');
+
+    switch (action) {
+      case 'play_pause':
+        isPlaying = !isPlaying;
+        if (playIcon) playIcon.style.display = isPlaying ? 'none' : 'block';
+        if (pauseIcon) pauseIcon.style.display = isPlaying ? 'block' : 'none';
+        sendCommand('play_pause');
+        break;
+
+      case 'prev':
+        sendCommand('prev');
+        break;
+
+      case 'next':
+        sendCommand('next');
+        break;
+
+      case 'shuffle':
+        isShuffle = !isShuffle;
+        if (btnShuffle) btnShuffle.classList.toggle('active-mode', isShuffle);
+        showToast(isShuffle ? 'Shuffle On' : 'Shuffle Off', '🔀');
+        sendCommand('shuffle');
+        break;
+
+      case 'repeat':
+        isRepeat = !isRepeat;
+        if (btnRepeat) btnRepeat.classList.toggle('active-mode', isRepeat);
+        showToast(isRepeat ? 'Repeat On' : 'Repeat Off', '🔁');
+        sendCommand('repeat');
+        break;
+
+      case 'favorite':
+        isFavorite = !isFavorite;
+        if (btnHeart) btnHeart.classList.toggle('active-red', isFavorite);
+        showToast(isFavorite ? 'Added to Favorites' : 'Removed from Favorites', '❤️');
+        break;
+
+      case 'mute':
+        isMuted = !isMuted;
+        sendCommand('mute');
+        break;
+
+      case 'app':
+        const slot = parseInt(el.getAttribute('data-slot') || '1', 10);
+        const name = el.getAttribute('data-name') || 'App';
+        showToast(`Launching ${name}...`, '🚀');
+        sendCommand('launch_app', { slot: slot, name: name });
+        break;
+
+      case 'clip':
+        const clipType = el.getAttribute('data-clip');
+        triggerPillAction(clipType);
+        break;
+
+      case 'desktop-selector':
+        showDesktopSelector();
+        break;
+
+      case 'close-modals':
+        hideDesktopSelector();
+        break;
+
+      case 'manual-connect':
+        connectManual();
+        break;
+    }
+  }
+
+  function triggerPillAction(type) {
+    const toastMap = {
+      cut: ['Cut (Ctrl + X)', '✂️'],
+      copy: ['Copied (Ctrl + C)', '📋'],
+      paste: ['Pasting (Ctrl + V)', '📥'],
+      undo: ['Undo (Ctrl + Z)', '↩️'],
+      delete: ['Deleted (Del)', '🗑️'],
+      select_all: ['Selected All (Ctrl + A)', '⬚'],
+      find: ['Find (Ctrl + F)', '🔍'],
+      save: ['Saved (Ctrl + S)', '💾'],
+      screenshot: ['Screenshot (Win + Shift + S)', '📸'],
+      history: ['Clipboard History (Win + V)', '📜']
+    };
+
+    const info = toastMap[type] || ['Action Sent', '✨'];
+    showToast(info[0], info[1]);
+    sendCommand('clipboard_action', { type: type });
+  }
+
+  // ================= 2. CAROUSEL & SWIPE NAVIGATION =================
+  window.switchPage = function(pageIndex) {
+    if (pageIndex < 0 || pageIndex > 2) return;
+    currentPage = pageIndex;
+
+    const offsetPercent = pageIndex * 33.333333;
+    if (carouselTrack) {
+      carouselTrack.style.transform = `translate3d(-${offsetPercent}%, 0, 0)`;
+    }
+
+    if (navTabs) {
+      const tabs = navTabs.querySelectorAll('.nav-glass-tab');
+      tabs.forEach((tab, idx) => {
+        tab.classList.toggle('active', idx === pageIndex);
+      });
+    }
+
+    if (carouselDots) {
+      const dots = carouselDots.querySelectorAll('.carousel-dot');
+      dots.forEach((dot, idx) => {
+        dot.classList.toggle('active', idx === pageIndex);
+      });
+    }
+
+    triggerHaptic('light');
+  };
+
+  function setupSwipeNavigation() {
+    if (!carouselViewport) return;
+
+    carouselViewport.addEventListener('touchstart', (e) => {
+      if (e.touches.length >= 1) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        touchDiffX = 0;
+        isSwiping = true;
+      }
+    }, { passive: true });
+
+    carouselViewport.addEventListener('touchmove', (e) => {
+      if (!isSwiping || isDraggingVolume || isScrubbingWaveform) return;
+      const currentX = e.touches[0].clientX;
+      const currentY = e.touches[0].clientY;
+      const diffX = currentX - touchStartX;
+      const diffY = currentY - touchStartY;
+
+      if (Math.abs(diffX) > Math.abs(diffY)) {
+        touchDiffX = diffX;
+      }
+    }, { passive: true });
+
+    carouselViewport.addEventListener('touchend', () => {
+      if (!isSwiping) return;
+      isSwiping = false;
+
+      const swipeThreshold = 50;
+      if (touchDiffX < -swipeThreshold) {
+        switchPage(Math.min(2, currentPage + 1));
+      } else if (touchDiffX > swipeThreshold) {
+        switchPage(Math.max(0, currentPage - 1));
+      }
+      touchDiffX = 0;
+    }, { passive: true });
+  }
+
+  // ================= 3. ULTRA-FAST CSS CLIP WAVEFORM SCRUBBER =================
+  function initWaveformBars() {
+    if (!waveformBarsBase || !waveformBarsActive) return;
+    const count = 56;
+    let baseHtml = '';
+    let activeHtml = '';
+
+    for (let i = 0; i < count; i++) {
+      const mid = Math.abs(i - count / 2) / (count / 2);
+      const envelope = Math.max(0.18, 1 - mid * 0.55);
+      const raw = Math.sin(i * 0.38) * 0.35 + Math.cos(i * 0.72) * 0.3 + 0.5;
+      const heightPercent = Math.max(15, Math.min(95, Math.round(raw * envelope * 95)));
+
+      baseHtml += `<div class="waveform-bar-element" style="height: ${heightPercent}%;"></div>`;
+      activeHtml += `<div class="waveform-bar-element" style="height: ${heightPercent}%;"></div>`;
+    }
+
+    waveformBarsBase.innerHTML = baseHtml;
+    waveformBarsActive.innerHTML = activeHtml;
+  }
+
+  function updateWaveformProgress(ratio) {
+    ratio = Math.max(0, Math.min(1, ratio));
+    const percent = (ratio * 100).toFixed(2);
+    if (waveformProgressClip) waveformProgressClip.style.width = `${percent}%`;
+    if (waveformNeedle) waveformNeedle.style.left = `${percent}%`;
+    if (timeElapsed) timeElapsed.textContent = formatTime(currentPosition);
+    if (timeTotal) timeTotal.textContent = formatTime(duration);
+  }
+
+  function handleWaveformScrub(clientX) {
+    if (!waveformBar || duration <= 0) return;
+    const rect = waveformBar.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    currentPosition = Math.round(ratio * duration);
+    updateWaveformProgress(ratio);
+  }
+
+  function setupWaveformEvents() {
+    if (!waveformBar) return;
+
+    waveformBar.addEventListener('pointerdown', (e) => {
+      isScrubbingWaveform = true;
+      try { waveformBar.setPointerCapture(e.pointerId); } catch (err) {}
+      handleWaveformScrub(e.clientX);
+    });
+
+    waveformBar.addEventListener('pointermove', (e) => {
+      if (isScrubbingWaveform) handleWaveformScrub(e.clientX);
+    });
+
+    const finishScrub = (e) => {
+      if (isScrubbingWaveform) {
+        isScrubbingWaveform = false;
+        try { waveformBar.releasePointerCapture(e.pointerId); } catch (err) {}
+        if (duration > 0) {
+          sendCommand('seek', { position: currentPosition });
+          triggerHaptic('light');
+        }
+      }
+    };
+
+    waveformBar.addEventListener('pointerup', finishScrub);
+    waveformBar.addEventListener('pointercancel', finishScrub);
+  }
+
+  // Smooth Scrubber Progress Ticker
+  setInterval(() => {
+    if (isPlaying && !isScrubbingWaveform && duration > 0) {
+      const now = performance.now();
+      const elapsedSec = (now - lastPositionUpdate) / 1000;
+      if (currentPosition < duration) {
+        currentPosition = Math.min(duration, currentPosition + elapsedSec);
+        lastPositionUpdate = now;
+        updateWaveformProgress(currentPosition / duration);
+      }
+    }
+  }, 250);
+
+  // ================= 4. VOLUME SLIDER ENGINE =================
   function updateVolumeUI(val, animate = true) {
     val = Math.max(0, Math.min(100, Math.round(val)));
     currentVolume = val;
     if (volumeBadge) volumeBadge.textContent = `${val}%`;
     if (volumeFill) {
-      volumeFill.style.transition = animate ? 'width 0.12s ease-out' : 'none';
+      volumeFill.style.transition = animate ? 'width 0.1s ease-out' : 'none';
       volumeFill.style.width = `${val}%`;
     }
     if (volIcon && muteIcon) {
@@ -419,10 +428,9 @@
     }
   }
 
-  function handleVolumeTouch(e) {
+  function handleVolumeTouch(clientX) {
     if (!volumeTrack) return;
     const rect = volumeTrack.getBoundingClientRect();
-    const clientX = e.touches && e.touches.length ? e.touches[0].clientX : e.clientX;
     const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
     sendVolumeUpdate(Math.round(ratio * 100));
   }
@@ -433,11 +441,11 @@
     volumeTrack.addEventListener('pointerdown', (e) => {
       isDraggingVolume = true;
       try { volumeTrack.setPointerCapture(e.pointerId); } catch (err) {}
-      handleVolumeTouch(e);
+      handleVolumeTouch(e.clientX);
     });
 
     volumeTrack.addEventListener('pointermove', (e) => {
-      if (isDraggingVolume) handleVolumeTouch(e);
+      if (isDraggingVolume) handleVolumeTouch(e.clientX);
     });
 
     const finishVolume = () => {
@@ -452,106 +460,15 @@
     volumeTrack.addEventListener('pointercancel', finishVolume);
   }
 
-  window.toggleMute = function() {
-    triggerHaptic('medium');
-    isMuted = !isMuted;
-    sendCommand('mute');
-  };
-
-  // ================= 6. TRANSPORT CONTROLS =================
-  const bindInstantTap = (el, callback) => {
-    if (!el) return;
-    let touchHandled = false;
-    el.addEventListener('touchstart', (e) => {
-      touchHandled = true;
-      callback(e);
-    }, { passive: true });
-    el.addEventListener('click', (e) => {
-      if (touchHandled) {
-        touchHandled = false;
-        return;
-      }
-      callback(e);
-    });
-  };
-
-  bindInstantTap(btnPlayPause, () => {
-    triggerHaptic('medium');
-    isPlaying = !isPlaying;
-    playIcon.style.display = isPlaying ? 'none' : 'block';
-    pauseIcon.style.display = isPlaying ? 'block' : 'none';
-    sendCommand('play_pause');
-  });
-
-  bindInstantTap(btnPrev, () => {
-    triggerHaptic('light');
-    sendCommand('prev');
-  });
-
-  bindInstantTap(btnNext, () => {
-    triggerHaptic('light');
-    sendCommand('next');
-  });
-
-  window.toggleShuffle = function() {
-    triggerHaptic('light');
-    isShuffle = !isShuffle;
-    btnShuffle.classList.toggle('active-mode', isShuffle);
-    showToast(isShuffle ? 'Shuffle On' : 'Shuffle Off', '🔀');
-    sendCommand('shuffle');
-  };
-
-  window.toggleRepeat = function() {
-    triggerHaptic('light');
-    isRepeat = !isRepeat;
-    btnRepeat.classList.toggle('active-mode', isRepeat);
-    showToast(isRepeat ? 'Repeat On' : 'Repeat Off', '🔁');
-    sendCommand('repeat');
-  };
-
-  window.toggleFavorite = function() {
-    triggerHaptic('medium');
-    isFavorite = !isFavorite;
-    btnHeart.classList.toggle('active-red', isFavorite);
-    showToast(isFavorite ? 'Added to Favorites' : 'Removed from Favorites', '❤️');
-  };
-
-  // ================= 7. MISSION CONTROL & SHORTCUT ACTIONS =================
-  window.launchApp = function(slot, name) {
-    triggerHaptic('medium');
-    showToast(`Launching ${name}...`, '🚀');
-    sendCommand('launch_app', { slot: slot, name: name });
-  };
-
-  window.triggerPillAction = function(type) {
-    triggerHaptic('medium');
-    const toastMap = {
-      cut: ['Cut (Ctrl + X)', '✂️'],
-      copy: ['Copied (Ctrl + C)', '📋'],
-      paste: ['Pasting (Ctrl + V)', '📥'],
-      undo: ['Undo (Ctrl + Z)', '↩️'],
-      delete: ['Deleted (Del)', '🗑️'],
-      select_all: ['Selected All (Ctrl + A)', '⬚'],
-      find: ['Find (Ctrl + F)', '🔍'],
-      save: ['Saved (Ctrl + S)', '💾'],
-      screenshot: ['Screenshot (Win + Shift + S)', '📸'],
-      history: ['Clipboard History (Win + V)', '📜']
-    };
-
-    const info = toastMap[type] || ['Action Sent', '✨'];
-    showToast(info[0], info[1]);
-    sendCommand('clipboard_action', { type: type });
-  };
-
-  // ================= 8. DESKTOP SELECTOR OVERLAY =================
+  // ================= 5. DESKTOP SELECTOR OVERLAY =================
   window.showDesktopSelector = function() {
     triggerHaptic('light');
-    desktopLaunchOverlay.classList.add('open');
+    if (desktopLaunchOverlay) desktopLaunchOverlay.classList.add('open');
     probeSubnet();
   };
 
   window.hideDesktopSelector = function() {
-    desktopLaunchOverlay.classList.remove('open');
+    if (desktopLaunchOverlay) desktopLaunchOverlay.classList.remove('open');
   };
 
   window.closeModalsOnBackdrop = function(e) {
@@ -560,7 +477,7 @@
     }
   };
 
-  // ================= 9. WEBSOCKET NETWORK CORE =================
+  // ================= 6. WEBSOCKET NETWORK CORE =================
   function sendCommand(action, params = {}) {
     if (!ws || ws.readyState !== WebSocket.OPEN) {
       if (serverHost) connectWebSocket(serverHost);
@@ -690,10 +607,12 @@
       lastPositionUpdate = performance.now();
     }
 
-    renderWaveform();
+    if (duration > 0) {
+      updateWaveformProgress(currentPosition / duration);
+    }
   }
 
-  // ================= 10. AUTO-DISCOVERY & SUBNET PROBING =================
+  // ================= 7. AUTO-DISCOVERY & SUBNET PROBING =================
   function fetchWithTimeout(url, timeoutMs = 1200) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -752,7 +671,7 @@
     desktopDevicesList.innerHTML = '';
     discoveredServers.forEach(srv => {
       const card = document.createElement('div');
-      card.className = 'desktop-item-card';
+      card.className = 'desktop-item-card fast-touch';
       card.innerHTML = `
         <div style="display: flex; align-items: center; gap: 10px;">
           <span style="font-size: 18px;">🖥️</span>
@@ -778,14 +697,14 @@
     connectWebSocket(ip);
   };
 
-  // ================= 11. INITIALIZATION =================
+  // ================= 8. INITIALIZATION =================
   window.addEventListener('DOMContentLoaded', () => {
-    initFluidBackground();
+    setupFastTouchDispatcher();
     setupSwipeNavigation();
-    generateWaveformBars();
+    initWaveformBars();
     setupWaveformEvents();
     setupVolumeEvents();
-    renderWaveform();
+    updateWaveformProgress(currentPosition / duration);
     updateVolumeUI(currentVolume, false);
 
     const lastHost = localStorage.getItem('mousely_last_host');
