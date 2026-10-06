@@ -87,6 +87,10 @@ namespace Mousely.Tray.Media
             }
             if (deltaX != 0)
             {
+                if (deltaY != 0)
+                {
+                    Thread.Sleep(4);
+                }
                 mouse_event(MOUSEEVENTF_HWHEEL, 0, 0, unchecked((uint)deltaX), UIntPtr.Zero);
             }
         }

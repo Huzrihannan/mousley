@@ -28,6 +28,8 @@
   let isDragLock = false;
   let trackpadTouchCount = 0;
   let trackpadStartTime = 0;
+  let lastTapEndTime = 0;
+  let isTapDragging = false;
 
   // 1-Finger Pointer Tracking
   let t1StartX = 0;
@@ -188,7 +190,14 @@
   function setupMagicTrackpad() {
     const surface = document.getElementById('trackpadTouchSurface');
     const reticle = document.getElementById('trackpadReticle');
+    const regionLeft = document.getElementById('regionLeftClick');
+    const regionRight = document.getElementById('regionRightClick');
     if (!surface) return;
+
+    function clearRegionHighlights() {
+      if (regionLeft) regionLeft.classList.remove('active-region');
+      if (regionRight) regionRight.classList.remove('active-region');
+    }
 
     surface.addEventListener('touchstart', (e) => {
       trackpadTouchCount = e.touches.length;
@@ -203,13 +212,34 @@
         t1LastY = touch.clientY;
         t1Moved = false;
 
-        updateTrackpadLabel(isDragLock ? 'Dragging...' : '1-Finger Pointer');
+        const now = performance.now();
+        if (now - lastTapEndTime < 280) {
+          isTapDragging = true;
+          sendCommand('mouse_down', { button: 'left' });
+          triggerHaptic('medium');
+        }
+
+        // Visual press feedback if touch started in integrated bottom click region (bottom 56px)
+        if (touch.clientY >= rect.bottom - 56) {
+          if (touch.clientX < rect.left + rect.width * 0.5) {
+            if (regionLeft) regionLeft.classList.add('active-region');
+          } else {
+            if (regionRight) regionRight.classList.add('active-region');
+          }
+        }
+
+        updateTrackpadLabel(isTapDragging ? 'Dragging...' : (isDragLock ? 'Dragging...' : '1-Finger Pointer'));
         if (reticle) {
           reticle.style.left = `${touch.clientX - rect.left}px`;
           reticle.style.top = `${touch.clientY - rect.top}px`;
           reticle.classList.add('active');
         }
       } else if (e.touches.length === 2) {
+        clearRegionHighlights();
+        if (isTapDragging) {
+          isTapDragging = false;
+          sendCommand('mouse_up', { button: 'left' });
+        }
         const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
         const my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
         t2StartX = mx;
@@ -223,6 +253,7 @@
         updateTrackpadLabel('✌️ 2-Finger Scroll');
         if (reticle) reticle.classList.remove('active');
       } else if (e.touches.length === 3) {
+        clearRegionHighlights();
         const mx = (e.touches[0].clientX + e.touches[1].clientX + e.touches[2].clientX) / 3;
         const my = (e.touches[0].clientY + e.touches[1].clientY + e.touches[2].clientY) / 3;
         t3StartX = mx;
@@ -246,8 +277,9 @@
         const dx = cx - t1LastX;
         const dy = cy - t1LastY;
 
-        if (Math.hypot(cx - t1StartX, cy - t1StartY) > 4) {
+        if (Math.hypot(cx - t1StartX, cy - t1StartY) > 5) {
           t1Moved = true;
+          clearRegionHighlights();
         }
 
         // Apple Mac cursor ballistics curve
@@ -286,19 +318,37 @@
         t2ScrollAccumY += deltaY;
 
         // Discretized scroll notch with iPhone Taptic feedback
+        const absX = Math.abs(t2ScrollAccumX);
+        const absY = Math.abs(t2ScrollAccumY);
         const NOTCH_THRESHOLD = 8;
-        if (Math.abs(t2ScrollAccumY) >= NOTCH_THRESHOLD || Math.abs(t2ScrollAccumX) >= NOTCH_THRESHOLD) {
-          // Invert deltaY for natural macOS-style scrolling
-          const scrollStepY = Math.round((t2ScrollAccumY / NOTCH_THRESHOLD) * 120);
-          const scrollStepX = Math.round((t2ScrollAccumX / NOTCH_THRESHOLD) * 120);
+
+        if (absX >= NOTCH_THRESHOLD || absY >= NOTCH_THRESHOLD) {
+          let scrollStepY = 0;
+          let scrollStepX = 0;
+
+          // Directional dominance / axis-lock to prevent Windows dropping horizontal wheel
+          if (absX > absY * 1.15) {
+            // Horizontal dominance: strictly zero out Y
+            scrollStepX = Math.round((t2ScrollAccumX / NOTCH_THRESHOLD) * 120);
+            t2ScrollAccumX %= NOTCH_THRESHOLD;
+            t2ScrollAccumY = 0;
+          } else if (absY > absX * 1.15) {
+            // Vertical dominance: strictly zero out X
+            scrollStepY = Math.round((t2ScrollAccumY / NOTCH_THRESHOLD) * 120);
+            t2ScrollAccumY %= NOTCH_THRESHOLD;
+            t2ScrollAccumX = 0;
+          } else {
+            // Diagonal free scroll
+            scrollStepY = Math.round((t2ScrollAccumY / NOTCH_THRESHOLD) * 120);
+            scrollStepX = Math.round((t2ScrollAccumX / NOTCH_THRESHOLD) * 120);
+            t2ScrollAccumY %= NOTCH_THRESHOLD;
+            t2ScrollAccumX %= NOTCH_THRESHOLD;
+          }
 
           sendCommand('scroll', { deltaY: scrollStepY, deltaX: scrollStepX });
 
           // "if input is 2 fingers then it will be considered scroll either horzontal or vertical, this must trigger the haptic engine on the phone as well"
           triggerHaptic('light');
-
-          t2ScrollAccumY %= NOTCH_THRESHOLD;
-          t2ScrollAccumX %= NOTCH_THRESHOLD;
         }
 
         t2LastX = mx;
@@ -351,19 +401,46 @@
 
       if (e.touches.length === 0) {
         if (reticle) reticle.classList.remove('active');
+        clearRegionHighlights();
 
-        if (trackpadTouchCount === 1) {
-          // 1-Finger Tap -> Left Click
-          if (!t1Moved && elapsed < 250) {
-            triggerHaptic('medium');
-            sendCommand('left_click');
-            updateTrackpadLabel('Left Click');
+        if (isTapDragging) {
+          isTapDragging = false;
+          sendCommand('mouse_up', { button: 'left' });
+          triggerHaptic('light');
+          lastTapEndTime = 0;
+          updateTrackpadLabel('1-Finger Pointer');
+        } else if (trackpadTouchCount === 1) {
+          if (!t1Moved && elapsed < 300) {
+            lastTapEndTime = performance.now();
+            const rect = surface.getBoundingClientRect();
+            const isBottomRegion = t1StartY >= rect.bottom - 56 || t1LastY >= rect.bottom - 56;
+            if (isBottomRegion) {
+              const isLeftHalf = t1LastX < rect.left + rect.width * 0.5;
+              if (isLeftHalf) {
+                // Bottom-Left region: Left Click
+                triggerHaptic('medium');
+                sendCommand('left_click');
+                updateTrackpadLabel('Primary Click (Left)');
+              } else {
+                // Bottom-Right region: Right Click
+                triggerHaptic('medium');
+                sendCommand('right_click');
+                updateTrackpadLabel('Secondary Click (Right)');
+              }
+            } else {
+              // Main upper surface tap -> Left Click
+              triggerHaptic('light');
+              sendCommand('left_click');
+              updateTrackpadLabel('Tap to Click (Left)');
+            }
           } else {
+            lastTapEndTime = 0;
             updateTrackpadLabel('1-Finger Pointer');
           }
         } else if (trackpadTouchCount === 2) {
-          // 2-Finger Tap -> Secondary Click (Right Click)
-          if (t2TapCandidate && elapsed < 260) {
+          lastTapEndTime = 0;
+          // 2-Finger Tap anywhere -> Secondary Click (Right Click)
+          if (t2TapCandidate && elapsed < 280) {
             triggerHaptic('medium');
             sendCommand('right_click');
             showToast('Right Click (2-Finger Tap)', '⚡');
@@ -372,6 +449,7 @@
             updateTrackpadLabel('1-Finger Pointer');
           }
         } else {
+          lastTapEndTime = 0;
           updateTrackpadLabel('1-Finger Pointer');
         }
 
@@ -383,7 +461,13 @@
 
     surface.addEventListener('touchcancel', () => {
       if (reticle) reticle.classList.remove('active');
+      clearRegionHighlights();
+      if (isTapDragging) {
+        isTapDragging = false;
+        sendCommand('mouse_up', { button: 'left' });
+      }
       trackpadTouchCount = 0;
+      lastTapEndTime = 0;
       updateTrackpadLabel('1-Finger Pointer');
     }, { passive: true });
   }

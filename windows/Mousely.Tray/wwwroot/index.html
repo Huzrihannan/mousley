@@ -29,11 +29,7 @@
     
     <!-- Top Liquid Glass Navigation Header -->
     <header class="top-glass-header">
-      <!-- Left: Connection Status Pill -->
-      <button class="status-glass-pill" id="statusPill" onclick="showDesktopSelector()" title="Desktop Connection">
-        <span class="status-glow-dot" id="statusDot"></span>
-        <span class="status-name" id="statusDeviceName">Select Desktop</span>
-      </button>
+      <div class="header-spacer"></div>
 
       <!-- Center: Liquid Glass Segmented Page Switcher (4 Pages) -->
       <nav class="nav-segmented-glass" id="navTabs">
@@ -92,35 +88,13 @@
       <div class="carousel-slider-track" id="carouselTrack">
         
         <!-- =========================================================================
-             PAGE 0: APPLE MAGIC TRACKPAD (Glass Surface + Multi-Touch Gestures)
+             PAGE 0: APPLE MAGIC TRACKPAD (Maximized Frosted Glass + Dot Grid Matrix)
              ========================================================================= -->
         <section class="carousel-page-pane page-trackpad" id="pageTrackpad">
           <div class="liquid-trackpad-card">
             <div class="trackpad-glass-specular"></div>
 
-            <!-- Top HUD Bar: Gestures Info & Drag Lock -->
-            <div class="trackpad-hud-bar">
-              <div class="trackpad-hud-badge" id="trackpadHudBadge">
-                <span class="hud-dot"></span>
-                <span id="trackpadGestureLabel">1-Finger Pointer</span>
-              </div>
-
-              <div class="trackpad-hud-hints">
-                <span class="gesture-chip">✌️ 2-Finger Scroll</span>
-                <span class="gesture-chip">⚡ 2-Finger Tap: Right Click</span>
-                <span class="gesture-chip">🪟 3-Finger: Mission Control</span>
-              </div>
-
-              <button class="trackpad-tool-btn" id="btnDragLock" onclick="toggleDragLock()" title="Toggle Drag Lock">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                </svg>
-                <span id="dragLockLabel">Drag: Off</span>
-              </button>
-            </div>
-
-            <!-- Glass Trackpad Active Touch Surface -->
+            <!-- Glass Trackpad Active Touch Surface with Dot Matrix Texture -->
             <div class="trackpad-touch-surface" id="trackpadTouchSurface">
               <div class="trackpad-center-mark" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -129,23 +103,25 @@
                 <span>Magic Glass Trackpad</span>
               </div>
               <div class="trackpad-reticle" id="trackpadReticle"></div>
-            </div>
 
-            <!-- Bottom Left & Right Physical Click Bars -->
-            <div class="trackpad-click-row">
-              <button class="trackpad-click-pad click-left" onclick="trackpadLeftClick()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                  <polyline points="15 18 9 12 15 6"></polyline>
-                </svg>
-                <span>Left Click</span>
-              </button>
-              <div class="trackpad-pad-divider"></div>
-              <button class="trackpad-click-pad click-right" onclick="trackpadRightClick()">
-                <span>Right Click</span>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                  <polyline points="9 18 15 12 9 6"></polyline>
-                </svg>
-              </button>
+              <!-- Integrated Bottom Click Regions (Divided by subtle hairline) -->
+              <div class="trackpad-bottom-regions" id="trackpadBottomRegions">
+                <div class="trackpad-region region-left" id="regionLeftClick">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                  </svg>
+                  <span class="region-title">Left Click</span>
+                  <span class="region-sub">Primary</span>
+                </div>
+                <div class="trackpad-region-divider"></div>
+                <div class="trackpad-region region-right" id="regionRightClick">
+                  <span class="region-title">Right Click</span>
+                  <span class="region-sub">Secondary</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </div>
+              </div>
             </div>
 
           </div>
@@ -495,16 +471,6 @@
 
       </div>
     </div>
-
-    <!-- Minimal Liquid Glass Pagination Dots -->
-    <footer class="bottom-page-indicator">
-      <div class="carousel-dots-pill" id="carouselDots">
-        <span class="carousel-dot active" onclick="switchPage(0)"></span>
-        <span class="carousel-dot" onclick="switchPage(1)"></span>
-        <span class="carousel-dot" onclick="switchPage(2)"></span>
-        <span class="carousel-dot" onclick="switchPage(3)"></span>
-      </div>
-    </footer>
 
   </div>
 
