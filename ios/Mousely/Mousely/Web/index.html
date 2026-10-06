@@ -149,7 +149,6 @@
         <section class="page-pane page-mission" id="pageMission">
           <div class="mission-header">
             <h2 class="section-title">Mission Control</h2>
-            <span class="section-subtitle">8 Quick Launch Apps for Windows</span>
           </div>
 
           <div class="blocks-grid-8">
@@ -160,7 +159,6 @@
               </div>
               <div class="block-text">
                 <span class="block-name">Browser</span>
-                <span class="block-desc">Web & Chrome</span>
               </div>
             </button>
 
@@ -171,7 +169,6 @@
               </div>
               <div class="block-text">
                 <span class="block-name">Spotify</span>
-                <span class="block-desc">Music & Audio</span>
               </div>
             </button>
 
@@ -182,7 +179,6 @@
               </div>
               <div class="block-text">
                 <span class="block-name">Explorer</span>
-                <span class="block-desc">Files & Drives</span>
               </div>
             </button>
 
@@ -193,7 +189,6 @@
               </div>
               <div class="block-text">
                 <span class="block-name">Task Manager</span>
-                <span class="block-desc">Process Monitor</span>
               </div>
             </button>
 
@@ -204,7 +199,6 @@
               </div>
               <div class="block-text">
                 <span class="block-name">Terminal</span>
-                <span class="block-desc">PowerShell / WT</span>
               </div>
             </button>
 
@@ -215,7 +209,6 @@
               </div>
               <div class="block-text">
                 <span class="block-name">Calculator</span>
-                <span class="block-desc">Quick Math</span>
               </div>
             </button>
 
@@ -226,7 +219,6 @@
               </div>
               <div class="block-text">
                 <span class="block-name">Notepad</span>
-                <span class="block-desc">Notes & Scratch</span>
               </div>
             </button>
 
@@ -237,7 +229,6 @@
               </div>
               <div class="block-text">
                 <span class="block-name">Settings</span>
-                <span class="block-desc">System Preferences</span>
               </div>
             </button>
           </div>
@@ -246,8 +237,7 @@
         <!-- ================= PAGE 3: CLIPBOARD ACTIONS (3 BLOCKS) ================= -->
         <section class="page-pane page-clipboard" id="pageClipboard">
           <div class="clipboard-header">
-            <h2 class="section-title">Quick Action Blocks</h2>
-            <span class="section-subtitle">One-Tap Windows Productivity Actions</span>
+            <h2 class="section-title">Quick Actions</h2>
           </div>
 
           <div class="blocks-grid-3">
@@ -260,7 +250,6 @@
               </div>
               <div class="clip-label-group">
                 <span class="clip-title">Copy</span>
-                <span class="clip-hint">Copy current selection</span>
               </div>
             </button>
 
@@ -273,7 +262,6 @@
               </div>
               <div class="clip-label-group">
                 <span class="clip-title">Paste</span>
-                <span class="clip-hint">Paste clipboard content</span>
               </div>
             </button>
 
@@ -286,7 +274,6 @@
               </div>
               <div class="clip-label-group">
                 <span class="clip-title">Clipboard History</span>
-                <span class="clip-hint">Open Windows clipboard modal</span>
               </div>
             </button>
           </div>
@@ -295,12 +282,8 @@
       </div>
     </div>
 
-    <!-- 2-Finger Swipe Gesture Indicator / Footer -->
+    <!-- Minimalist Carousel Dots Footer -->
     <footer class="bottom-bar">
-      <div class="swipe-hint-pill">
-        <span class="swipe-icon">✌️</span>
-        <span>Swipe with 2 fingers to switch pages</span>
-      </div>
       <div class="carousel-dots" id="carouselDots">
         <span class="dot active" onclick="switchPage(0)"></span>
         <span class="dot" onclick="switchPage(1)"></span>
@@ -316,9 +299,8 @@
         <div class="launch-title-wrap">
           <div class="launch-title">
             <span>🖥️ Select Desktop</span>
-            <div class="radar-spinner" title="Scanning Wi-Fi..."></div>
+            <div class="radar-spinner"></div>
           </div>
-          <span class="launch-subtitle" id="discoverySubtitle">Looking for Mousely on your Wi-Fi...</span>
         </div>
         <button class="header-action-btn" onclick="hideDesktopSelector()" title="Dismiss">✕</button>
       </div>

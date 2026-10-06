@@ -171,17 +171,36 @@
     }
   };
 
+  let lastDiscoveredHash = '';
+
   function renderDiscoveredList() {
+    if (!desktopDevicesList) return;
+
     if (discoveredServers.size === 0) {
+      if (lastDiscoveredHash === 'empty') return;
+      lastDiscoveredHash = 'empty';
       desktopDevicesList.innerHTML = `
         <div class="desktop-item-card" style="justify-content: center; color: var(--text-secondary); cursor: default;">
           <span>Searching local Wi-Fi for Windows PCs...</span>
         </div>`;
-      discoverySubtitle.textContent = 'Looking for Mousely on your Wi-Fi...';
+      if (discoverySubtitle) discoverySubtitle.textContent = 'Searching...';
       return;
     }
 
-    discoverySubtitle.textContent = `Found ${discoveredServers.size} desktop PC${discoveredServers.size > 1 ? 's' : ''}`;
+    const currentHash = Array.from(discoveredServers.entries())
+      .map(([k, v]) => `${k}:${v.name || ''}`)
+      .sort()
+      .join('|');
+
+    // Do not wipe or mutate DOM if server list has not changed (prevents freezing touches in WebKit)
+    if (currentHash === lastDiscoveredHash && desktopDevicesList.children.length > 0) {
+      return;
+    }
+    lastDiscoveredHash = currentHash;
+
+    if (discoverySubtitle) {
+      discoverySubtitle.textContent = `Found ${discoveredServers.size} desktop PC${discoveredServers.size > 1 ? 's' : ''}`;
+    }
     desktopDevicesList.innerHTML = '';
 
     discoveredServers.forEach((info, host) => {
@@ -199,18 +218,19 @@
         <button type="button" class="btn-connect-pill" id="btn-conn-${safeId}">Connect ➔</button>
       `;
 
-      card.onclick = (e) => {
-        e.preventDefault();
+      const handleConnect = (e) => {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
         connectToHost(host);
       };
 
+      card.onclick = handleConnect;
+
       const btn = card.querySelector('.btn-connect-pill');
       if (btn) {
-        btn.onclick = (e) => {
-          e.stopPropagation();
-          e.preventDefault();
-          connectToHost(host);
-        };
+        btn.onclick = handleConnect;
       }
 
       desktopDevicesList.appendChild(card);
@@ -225,7 +245,7 @@
       btn.textContent = 'Connecting...';
       btn.style.opacity = '0.7';
     }
-    discoverySubtitle.textContent = `Connecting to ${host}...`;
+    if (discoverySubtitle) discoverySubtitle.textContent = `Connecting to ${host}...`;
     connectWebSocket(host);
   };
 
@@ -313,7 +333,9 @@
       btn.textContent = 'Connect ➔';
       btn.style.opacity = '1';
     }
-    discoverySubtitle.textContent = `Could not connect to ${host}. Tap to retry.`;
+    if (discoverySubtitle) {
+      discoverySubtitle.textContent = `Could not connect to ${host}. Tap to retry.`;
+    }
 
     scheduleReconnect();
   }
@@ -627,6 +649,14 @@
     sendCommand('clipboard_action', { type: type });
   };
 
+  // Safe fetch with timeout compatible with iOS 15.8 / Safari 15+
+  function fetchWithTimeout(url, timeoutMs = 1200) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    return fetch(url, { signal: controller.signal })
+      .finally(() => clearTimeout(timeoutId));
+  }
+
   // --- Background Prober on Launch ---
   function probeSubnet() {
     let savedHost = localStorage.getItem('mousely_last_host');
@@ -636,7 +666,7 @@
     }
 
     if (savedHost) {
-      fetch(`http://${savedHost}/api/status`, { signal: AbortSignal.timeout(1200) })
+      fetchWithTimeout(`http://${savedHost}/api/status`, 1200)
         .then(r => r.json())
         .then(data => {
           const parts = savedHost.split(':');
