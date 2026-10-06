@@ -102,20 +102,27 @@
         </div>
       </nav>
 
-      <!-- Right: Settings / Discovered PCs Button -->
-      <button class="header-glass-icon-btn" onclick="showDesktopSelector()" title="Scan Devices">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="4" y1="21" x2="4" y2="14"></line>
-          <line x1="4" y1="10" x2="4" y2="3"></line>
-          <line x1="12" y1="21" x2="12" y2="12"></line>
-          <line x1="12" y1="8" x2="12" y2="3"></line>
-          <line x1="20" y1="21" x2="20" y2="16"></line>
-          <line x1="20" y1="12" x2="20" y2="3"></line>
-          <line x1="1" y1="14" x2="7" y2="14"></line>
-          <line x1="9" y1="8" x2="15" y2="8"></line>
-          <line x1="17" y1="16" x2="23" y2="16"></line>
-        </svg>
-      </button>
+      <!-- Right: Telemetry Chip & Settings / Scan Button -->
+      <div class="header-right-group">
+        <div class="telemetry-badge-chip hidden" id="telemetryBadgeChip">
+          <span class="chip-pulse-dot"></span>
+          <span class="chip-label">0.8ms UDP • 60 FPS • LINKED</span>
+          <span class="chip-signal-icon">📶</span>
+        </div>
+        <button class="header-glass-icon-btn" onclick="showDesktopSelector()" title="Scan Devices">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="21" x2="4" y2="14"></line>
+            <line x1="4" y1="10" x2="4" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12" y2="3"></line>
+            <line x1="20" y1="21" x2="20" y2="16"></line>
+            <line x1="20" y1="12" x2="20" y2="3"></line>
+            <line x1="1" y1="14" x2="7" y2="14"></line>
+            <line x1="9" y1="8" x2="15" y2="8"></line>
+            <line x1="17" y1="16" x2="23" y2="16"></line>
+          </svg>
+        </button>
+      </div>
     </header>
 
     <!-- Main Viewport Carousel (4 Pages) -->
@@ -517,69 +524,119 @@
         <!-- ================= PANE 1: GYRO RACING COCKPIT ================= -->
         <div class="cockpit-pane cockpit-racing" id="cockpitGyroRacing">
           
-          <!-- LEFT THUMB: BRAKE WING -->
-          <div class="racing-wing racing-left-wing">
-            <button class="racing-sub-btn btn-handbrake" id="btnHandbrake" data-gamepad="A" title="Handbrake (Space)">
-              <span class="btn-sub-tag">SPACE</span>
-              <span class="btn-sub-title">HANDBRAKE</span>
+          <!-- LEFT THUMB: BRAKE WING (ERGONOMIC RADIAL ARC) -->
+          <div class="racing-wing-column racing-left-wing">
+            <!-- Top Handbrake Capsule -->
+            <button class="racing-capsule-btn btn-handbrake" id="btnHandbrake" data-gamepad="A" title="Handbrake (Space)">
+              <div class="capsule-icon-ring">
+                <span class="capsule-ring-core"></span>
+              </div>
+              <div class="capsule-text-group">
+                <span class="capsule-label">HANDBRAKE</span>
+                <span class="capsule-sub">SPACE</span>
+              </div>
             </button>
-            <button class="racing-pedal-btn pedal-brake" id="btnPedalBrake" data-gamepad="LT" title="Foot Brake / Reverse (S)">
-              <div class="pedal-ribs"></div>
-              <span class="pedal-code">LT</span>
-              <span class="pedal-title">BRAKE</span>
-              <span class="pedal-sub">REVERSE</span>
-            </button>
-            <button class="racing-sub-btn btn-gear-down" id="btnGearDown" data-gamepad="LB" title="Gear Down (Q)">
-              <span>◀ GEAR DOWN (Q)</span>
-            </button>
+
+            <!-- Main Brake Touch Zone & Inboard Paddle -->
+            <div class="wing-pedal-composite">
+              <button class="racing-pedal-btn pedal-brake" id="btnPedalBrake" data-gamepad="LT" title="Foot Brake / Reverse (S)">
+                <!-- Upper Horizontal Rubber Traction Ribs -->
+                <div class="pedal-ribs-horizontal">
+                  <span></span><span></span><span></span><span></span><span></span>
+                </div>
+                
+                <div class="pedal-center-meta">
+                  <span class="pedal-code">LT</span>
+                  <span class="pedal-title">BRAKE</span>
+                  <span class="pedal-sub">REVERSE</span>
+                </div>
+
+                <!-- Lower Diagonal Emerald Traction Glow Stripes -->
+                <div class="pedal-stripes-diagonal">
+                  <span></span><span></span><span></span>
+                </div>
+              </button>
+
+              <!-- Inboard Downshift Paddle -->
+              <button class="racing-paddle-btn paddle-down" id="btnGearDown" data-gamepad="LB" title="Gear Down (Q)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+                <span>DOWN</span>
+              </button>
+            </div>
           </div>
 
-          <!-- CENTER RACING HUD -->
+          <!-- CENTER RACING HUD COCKPIT (TELEMETRY & GYRO HORIZON) -->
           <div class="racing-center-hud">
-            <!-- 1-Tap Re-Center Button -->
-            <button class="racing-recenter-btn" id="btnGyroCalibrate" onclick="recalibrateGyro()" title="Re-Center Steering Angle to 0°">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-              <span>🎯 RE-CENTER (0°)</span>
+            <!-- Gyro Horizon Dial & Dynamic Speedometer Arc -->
+            <div class="hud-gyro-gauge">
+              <div class="gauge-center-arrow">▼</div>
+              <svg class="gauge-dial-svg" viewBox="0 0 240 120">
+                <!-- Outer Calibrated Scale Ticks -->
+                <path class="gauge-dial-bg" d="M 30 110 A 90 90 0 0 1 210 110" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="3" stroke-dasharray="3 6"/>
+                <!-- Dynamic Steering Arc Fill -->
+                <path class="gauge-dial-active" id="gyroDialArc" d="M 30 110 A 90 90 0 0 1 210 110" fill="none" stroke="#00ff88" stroke-width="4.5" stroke-dasharray="283" stroke-dashoffset="141"/>
+                <!-- Center Needle Pivot & Indicator Line -->
+                <g id="gyroGaugeNeedleGroup" style="transform-origin: 120px 110px;">
+                  <line x1="120" y1="110" x2="120" y2="28" stroke="#00ff88" stroke-width="3" stroke-linecap="round"/>
+                  <circle cx="120" cy="28" r="3.5" fill="#00ff88"/>
+                </g>
+              </svg>
+
+              <!-- Prominent Center Degree Readout -->
+              <div class="gauge-center-readout">
+                <span class="hud-deg-number" id="gyroDegreeNum">0°</span>
+                <span class="hud-deg-direction" id="gyroDirectionTag">CENTER LOCK</span>
+              </div>
+
+              <!-- Dynamic RPM Tachometer Bar below angle readout -->
+              <div class="hud-rpm-box">
+                <div class="rpm-track-arc">
+                  <div class="rpm-fill-glow" id="rpmBarGlow"></div>
+                </div>
+                <span class="rpm-label-text">RPM</span>
+              </div>
+            </div>
+
+            <!-- 1-Tap 0° Re-Center Glowing Capsule Button -->
+            <button class="racing-recenter-capsule" id="btnGyroCalibrate" onclick="recalibrateGyro()" title="Re-Center Steering Angle to 0°">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>
+              <span>0° RE-CENTER</span>
             </button>
-
-            <!-- Digital Horizon & Angle Meter -->
-            <div class="racing-horizon-box">
-              <div class="racing-horizon-track">
-                <div class="horizon-center-notch"></div>
-                <div class="horizon-needle-bar" id="gyroHorizonBar"></div>
-              </div>
-              <div class="racing-angle-readout">
-                <span class="racing-deg-number" id="gyroDegreeNum">0°</span>
-                <span class="racing-deg-label" id="gyroDirectionTag">CENTER LOCK</span>
-              </div>
-            </div>
-
-            <!-- Quick Meta Controls -->
-            <div class="racing-meta-row">
-              <button class="racing-meta-btn" data-gamepad="START" title="Pause / Menu (Enter / Esc)">
-                <span>ESC / MENU</span>
-              </button>
-              <button class="racing-meta-btn" data-gamepad="Y" title="Change Camera View (C)">
-                <span>CAMERA (C)</span>
-              </button>
-            </div>
           </div>
 
-          <!-- RIGHT THUMB: THROTTLE (GAS) WING -->
-          <div class="racing-wing racing-right-wing">
-            <button class="racing-sub-btn btn-nitro" id="btnNitro" data-gamepad="X" title="Nitro / Boost (Shift)">
-              <span class="btn-sub-tag">SHIFT</span>
-              <span class="btn-sub-title">⚡ NITRO</span>
+          <!-- RIGHT THUMB: THROTTLE (GAS) WING (ERGONOMIC RADIAL ARC) -->
+          <div class="racing-wing-column racing-right-wing">
+            <!-- Top Nitro Boost Capsule -->
+            <button class="racing-capsule-btn btn-nitro" id="btnNitro" data-gamepad="X" title="Nitro Boost (Shift)">
+              <div class="capsule-icon-bolt">
+                <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              </div>
+              <div class="capsule-text-group">
+                <span class="capsule-label">NITRO BOOST</span>
+                <span class="capsule-sub">SHIFT</span>
+              </div>
             </button>
-            <button class="racing-pedal-btn pedal-gas" id="btnPedalGas" data-gamepad="RT" title="Throttle / Gas (W)">
-              <div class="pedal-ribs"></div>
-              <span class="pedal-code">RT</span>
-              <span class="pedal-title">GAS</span>
-              <span class="pedal-sub">THROTTLE</span>
-            </button>
-            <button class="racing-sub-btn btn-gear-up" id="btnGearUp" data-gamepad="RB" title="Gear Up (E)">
-              <span>GEAR UP (E) ▶</span>
-            </button>
+
+            <!-- Main Gas Touch Zone & Inboard Paddle -->
+            <div class="wing-pedal-composite right">
+              <!-- Inboard Upshift Paddle -->
+              <button class="racing-paddle-btn paddle-up" id="btnGearUp" data-gamepad="RB" title="Gear Up (E)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+                <span>UP</span>
+              </button>
+
+              <!-- Big Gas Pedal with Full Diagonal Emerald Power Stripes -->
+              <button class="racing-pedal-btn pedal-gas" id="btnPedalGas" data-gamepad="RT" title="Throttle / Gas (W)">
+                <div class="pedal-stripes-full-diagonal">
+                  <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+                </div>
+                <div class="pedal-center-meta">
+                  <span class="pedal-code">RT</span>
+                  <span class="pedal-title">GAS</span>
+                  <span class="pedal-sub">THROTTLE</span>
+                </div>
+              </button>
+            </div>
           </div>
 
         </div>

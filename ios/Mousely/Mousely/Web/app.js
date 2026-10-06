@@ -1108,6 +1108,10 @@
   const gyroHorizonBar = document.getElementById('gyroHorizonBar');
   const gyroDegreeNum = document.getElementById('gyroDegreeNum');
   const gyroDirectionTag = document.getElementById('gyroDirectionTag');
+  const telemetryBadgeChip = document.getElementById('telemetryBadgeChip');
+  const gyroDialArc = document.getElementById('gyroDialArc');
+  const gyroGaugeNeedleGroup = document.getElementById('gyroGaugeNeedleGroup');
+  const rpmBarGlow = document.getElementById('rpmBarGlow');
   const thumbstickZone = document.getElementById('thumbstickZone');
   const thumbstickBase = document.getElementById('thumbstickBase');
   const thumbstickKnob = document.getElementById('thumbstickKnob');
@@ -1121,6 +1125,7 @@
       if (pillModeGame) pillModeGame.classList.add('active');
       if (pillModeRemote) pillModeRemote.classList.remove('active');
       if (navTabs) navTabs.classList.add('theme-green');
+      if (telemetryBadgeChip) telemetryBadgeChip.classList.remove('hidden');
       if (remoteTabsGroup) {
         remoteTabsGroup.classList.add('hidden');
         remoteTabsGroup.style.display = 'none';
@@ -1154,6 +1159,7 @@
       if (pillModeRemote) pillModeRemote.classList.add('active');
       if (pillModeGame) pillModeGame.classList.remove('active');
       if (navTabs) navTabs.classList.remove('theme-green');
+      if (telemetryBadgeChip) telemetryBadgeChip.classList.add('hidden');
       if (gameTabsGroup) {
         gameTabsGroup.classList.add('hidden');
         gameTabsGroup.style.display = 'none';
@@ -1219,6 +1225,8 @@
     lastSentSteeringDeg = 0;
     if (gyroDegreeNum) gyroDegreeNum.textContent = '0°';
     if (gyroDirectionTag) gyroDirectionTag.textContent = 'CENTER LOCK';
+    if (gyroGaugeNeedleGroup) gyroGaugeNeedleGroup.style.transform = 'rotate(0deg)';
+    if (gyroDialArc) gyroDialArc.setAttribute('stroke-dashoffset', '141');
     if (gyroHorizonBar) gyroHorizonBar.style.transform = 'translate3d(0, 0, 0)';
     triggerHaptic('medium');
     showToast('Gyro Zero-Point Calibrated', '🎯');
@@ -1289,7 +1297,19 @@
     const angleDelta = Math.abs(clampedDeg - currentSteeringAngle);
     currentSteeringAngle = clampedDeg;
 
-    // Fast GPU Horizon Bar update (140px track width: -58px to +58px)
+    // Fast GPU Horizon Arc Gauge Needle rotation (-50deg to +50deg)
+    if (gyroGaugeNeedleGroup) {
+      const needleRot = (clampedDeg / GYRO_MAX_DEG) * 50;
+      gyroGaugeNeedleGroup.style.transform = `rotate(${needleRot.toFixed(1)}deg)`;
+    }
+
+    // Dynamic Steering Arc Dashoffset
+    if (gyroDialArc) {
+      const arcOffset = 141 - ((clampedDeg / GYRO_MAX_DEG) * 65);
+      gyroDialArc.setAttribute('stroke-dashoffset', arcOffset.toFixed(1));
+    }
+
+    // Fallback Bar update (140px track width: -58px to +58px)
     if (gyroHorizonBar) {
       const barOffset = Math.max(-58, Math.min(58, (clampedDeg / GYRO_MAX_DEG) * 58));
       gyroHorizonBar.style.transform = `translate3d(${barOffset.toFixed(1)}px, 0, 0)`;
@@ -1354,6 +1374,20 @@
         const curved = Math.sign(norm) * Math.pow(Math.abs(norm), 1.25);
         effX = Math.round(curved * 32767);
       }
+    }
+
+    // Dynamic Live RPM Tachometer Feedback
+    if (rpmBarGlow) {
+      let rpmPercent = 18; // Idle 1000 RPM
+      if (gamepadRt > 0) {
+        rpmPercent = 18 + (gamepadRt / 255) * 65;
+        if (gamepadButtonMask & (1 << BUTTON_BIT_MAP['X'])) {
+          rpmPercent = 98; // Nitro Redline 100%
+        }
+      } else if (gamepadLt > 0) {
+        rpmPercent = 28;
+      }
+      rpmBarGlow.style.width = `${rpmPercent.toFixed(0)}%`;
     }
 
     dispatchGamepadFrame(effX, effY, gamepadLt, gamepadRt, gamepadButtonMask);
