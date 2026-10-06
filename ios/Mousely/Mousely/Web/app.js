@@ -373,8 +373,9 @@
     waveformBar.addEventListener('pointercancel', finishScrub);
   }
 
-  // Smooth Scrubber Progress Ticker
+  // Smooth Scrubber Progress Ticker (low-power, pauses when page hidden)
   setInterval(() => {
+    if (document.hidden) return;
     if (isPlaying && !isScrubbingWaveform && duration > 0) {
       const now = performance.now();
       const elapsedSec = (now - lastPositionUpdate) / 1000;
@@ -384,7 +385,7 @@
         updateWaveformProgress(currentPosition / duration);
       }
     }
-  }, 250);
+  }, 400);
 
   // ================= 7. VOLUME SLIDER ENGINE =================
   function updateVolumeUI(val, animate = true) {
@@ -528,12 +529,14 @@
 
   let reconnectTimer = null;
   function scheduleReconnect() {
+    if (isConnected) return;
     clearTimeout(reconnectTimer);
     reconnectTimer = setTimeout(() => {
+      if (isConnected) return;
       let saved = localStorage.getItem('mousely_last_host') || serverHost;
       if (saved) connectWebSocket(saved);
       else probeSubnet();
-    }, 2500);
+    }, 3000);
   }
 
   function handleServerMessage(msg) {
@@ -609,10 +612,12 @@
   }
 
   function probeSubnet() {
+    if (isConnected) return;
     let savedHost = localStorage.getItem('mousely_last_host');
     if (savedHost) {
       testAndAddServer(savedHost);
       if (!isConnected) connectWebSocket(savedHost);
+      return;
     }
 
     if (window.location.hostname && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
@@ -621,7 +626,7 @@
         const subnet = `${parts[0]}.${parts[1]}.${parts[2]}`;
         const currentIp = parseInt(parts[3], 10);
         for (let i = 1; i <= 254; i++) {
-          if (Math.abs(i - currentIp) <= 20 || i === 1 || i === 2) {
+          if (Math.abs(i - currentIp) <= 8 || i === 1 || i === 2) {
             testAndAddServer(`${subnet}.${i}:58920`);
           }
         }

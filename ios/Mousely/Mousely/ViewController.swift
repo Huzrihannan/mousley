@@ -28,7 +28,26 @@ class ViewController: UIViewController, WKScriptMessageHandler, WKNavigationDele
         setupWebView()
         setupVolumeObserver()
         setupNetworkDiscovery()
+        setupLifecycleObservers()
         loadLocalWebContent()
+    }
+
+    private func setupLifecycleObservers() {
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.didEnterBackgroundNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.networkDiscovery.pauseBroadcastingQueries()
+        }
+
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.willEnterForegroundNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.networkDiscovery.resumeBroadcastingQueries()
+        }
     }
 
     private func setupWebView() {

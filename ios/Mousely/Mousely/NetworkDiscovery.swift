@@ -62,7 +62,11 @@ class NetworkDiscovery {
             if let data = content, let jsonString = String(data: data, encoding: .utf8) {
                 self?.parseBeacon(data: data, rawString: jsonString)
             }
-            // Close UDP connection immediately to prevent resource leakage & thermal heating
+            connection.cancel()
+        }
+
+        // Safety timeout to avoid lingering connection handles
+        queue.asyncAfter(deadline: .now() + 2.0) {
             connection.cancel()
         }
     }
@@ -80,14 +84,15 @@ class NetworkDiscovery {
         let server = DiscoveredServer(name: name, ip: ip, port: port)
         DispatchQueue.main.async {
             self.onServerDiscovered?(server)
+            self.pauseBroadcastingQueries()
         }
     }
 
     func startBroadcastingQueries() {
         sendBroadcastQuery()
-        // Broadcast every 3.0s (smooth, low-power, zero heating)
+        // Broadcast every 4.0s (low power)
         broadcastTimer?.invalidate()
-        broadcastTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
+        broadcastTimer = Timer.scheduledTimer(withTimeInterval: 4.0, repeats: true) { [weak self] _ in
             self?.sendBroadcastQuery()
         }
     }
